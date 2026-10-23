@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17181c">
+  <title>Tu reserva | James Barbershop</title>
+  <style>
+    :root{color-scheme:dark;--gold:#e4a64f;--bg:#111216;--card:#1c1d22;--muted:#b8b8bf}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;display:grid;place-items:center;padding:18px;background:radial-gradient(circle at top,#282319 0,#111216 47%);color:#f7f4ee;font:16px/1.5 Poppins,Arial,sans-serif}
+    main{width:min(100%,470px);padding:27px;border:1px solid #51402a;border-radius:22px;background:linear-gradient(150deg,#202126,#17181c);box-shadow:0 24px 70px #0008}
+    .brand{text-align:center}.brand img{width:76px;height:76px;object-fit:cover;border-radius:50%;border:2px solid var(--gold)}.brand p{margin:9px 0 0;color:var(--gold);font-size:.72rem;font-weight:800;letter-spacing:.18em}
+    h1{margin:18px 0 6px;text-align:center;font-size:1.35rem}.intro{text-align:center;color:var(--muted);font-size:.91rem}
+    .appointment{margin:22px 0;padding:16px;border-radius:14px;background:#111216;border:1px solid #34353b}
+    .appointment p{margin:4px 0}.appointment strong{color:var(--gold)}
+    .actions{display:grid;gap:10px;margin-top:20px}.actions button{min-height:50px;padding:12px;border:0;border-radius:12px;font:700 .95rem Poppins,Arial,sans-serif;cursor:pointer}
+    #attend{background:linear-gradient(135deg,#f1c879,#e4a64f);color:#21190d}#reschedule{background:#28292f;border:1px solid #55565c;color:#fff}#cancel{background:#402124;border:1px solid #8b4148;color:#ffdfe0}
+    #cancelConfirm{display:none;margin-top:12px;padding:14px;border:1px solid #9a454c;border-radius:12px;background:#301c20}
+    #cancelConfirm p{margin:0 0 10px}.confirmButtons{display:flex;gap:8px}.confirmButtons button{flex:1;min-height:42px;border:0;border-radius:9px;font-weight:700;cursor:pointer}
+    #cancelYes{background:#d9535d;color:#fff}#cancelNo{background:#3a3b42;color:#fff}
+    #status{min-height:1.5em;margin:14px 0 0;color:var(--gold);text-align:center;font-size:.88rem}
+    footer{margin-top:19px;text-align:center;color:#96979e;font-size:.75rem}
+    button:disabled{opacity:.55;cursor:wait}
+  </style>
+</head>
+<body>
+  <main>
+    <header class="brand">
+      <img id="brandLogo" src="https://i.ibb.co/JFrnTqWc/c4497cf0-2f10-43bf-b5ac-6c232c4d0e18.jpg" alt="James Barbershop">
+      <p>JAMES BARBERSHOP</p>
+    </header>
+    <h1>¿Qué hacemos con tu reserva?</h1>
+    <p class="intro">Confirma tu asistencia, cambia la hora o cancela. Es rápido y seguro.</p>
+    <section id="appointment" class="appointment" hidden aria-live="polite"></section>
+    <div class="actions">
+      <button id="attend" type="button">Sí, iré</button>
+      <button id="reschedule" type="button">Reagendar mi hora</button>
+      <button id="cancel" type="button">No podré ir</button>
+    </div>
+    <section id="cancelConfirm" aria-live="polite">
+      <p>¿Confirmas que no irás? Cancelaremos la reserva y liberaremos el horario.</p>
+      <div class="confirmButtons">
+        <button id="cancelYes" type="button">Sí, cancelar</button>
+        <button id="cancelNo" type="button">Mantener reserva</button>
+      </div>
+    </section>
+    <p id="status" role="status" aria-live="polite">Cargando tu reserva…</p>
+    <footer>Solo usamos estos avisos para gestionar tu reserva. No enviamos publicidad.</footer>
+  </main>
+  <script>
+    const token = new URLSearchParams(location.hash.slice(1)).get('t')
+      || new URLSearchParams(location.search).get('t');
+    if (token && (location.hash || location.search)) {
+      history.replaceState(null, '', location.pathname);
+    }
+    const statusElement = document.getElementById('status');
+    const appointmentElement = document.getElementById('appointment');
+    const buttons = Array.from(document.querySelectorAll('.actions button'));
+    const actionButtons = Array.from(document.querySelectorAll('.actions button, .confirmButtons button'));
+
+    document.getElementById('brandLogo').addEventListener('error', event => {
+      if (!event.currentTarget.dataset.fallback) {
+        event.currentTarget.dataset.fallback = '1';
+        event.currentTarget.src = '/logojames.jpg';
+      }
+    });
+
+    async function loadReservation() {
+      if (!token) throw new Error('El enlace no contiene una reserva válida.');
+      const response = await fetch('/.netlify/functions/push-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({ token, action: 'load' })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'No pudimos cargar la reserva.');
+      const reservation = result.reservation;
+      appointmentElement.innerHTML = `
+        <p><strong>Fecha:</strong> ${escapeHtml(reservation.fecha)}</p>
+        <p><strong>Hora:</strong> ${escapeHtml(reservation.hora)}</p>
+        ${reservation.servicios ? `<p><strong>Servicio:</strong> ${escapeHtml(reservation.servicios)}</p>` : ''}`;
+      appointmentElement.hidden = false;
+      statusElement.textContent = '';
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[char]);
+    }
+
+    async function performAction(action, newReservationId) {
+      actionButtons.forEach(button => { button.disabled = true; });
+      statusElement.textContent = 'Guardando tu respuesta…';
+      try {
+        const response = await fetch('/.netlify/functions/push-action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, action, newReservationId })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'No se pudo guardar la respuesta.');
+        if (action !== 'rescheduled') {
+          buttons.forEach(button => { button.hidden = true; });
+          document.getElementById('cancelConfirm').style.display = 'none';
+        }
+        statusElement.textContent = result.message;
+      } catch (error) {
+        statusElement.textContent = error.message;
+        actionButtons.forEach(button => { button.disabled = false; });
+      }
+    }
+
+    document.getElementById('attend').addEventListener('click', () => performAction('attend'));
+    document.getElementById('reschedule').addEventListener('click', () => {
+      if (!token) return;
+      localStorage.setItem('jbPushReagendarToken', token);
+      location.href = `/?jbReagendar=${encodeURIComponent(token)}`;
+    });
+    document.getElementById('cancel').addEventListener('click', () => {
+      document.getElementById('cancelConfirm').style.display = 'block';
+    });
+    document.getElementById('cancelNo').addEventListener('click', () => {
+      document.getElementById('cancelConfirm').style.display = 'none';
+    });
+    document.getElementById('cancelYes').addEventListener('click', () => performAction('cancel'));
+
+    loadReservation().catch(error => {
+      statusElement.textContent = error.message;
+      actionButtons.forEach(button => { button.disabled = true; });
+    });
+  </script>
+</body>
+</html>
