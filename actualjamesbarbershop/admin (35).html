@@ -1,0 +1,3692 @@
+<!-- ============================================
+     ADMIN.HTML - PANEL DE CONTROL BARBERÍA
+     Versión: 1.0 | Completo y Funcional
+     ============================================ -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Admin - Barbería</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase 9.22.2 (misma versión que tu app original) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    
+    <style>
+        /* ============================================
+           VARIABLES CSS - TEMA BARBERÍA
+           ============================================ */
+        :root {
+            --barber-red: #ff3b3f;
+            --barber-blue: #2089ff;
+            --barber-white: #ffffff;
+            --barber-orange: #e4a64f;
+            --barber-black: #0b0b0d;
+            --barber-surface: #15161a;
+            --barber-green: #33d17a;
+            --barber-gray: #2b2b2b;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, var(--barber-black) 0%, #1a1a1e 100%);
+            color: var(--barber-white);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        /* ============================================
+           PANTALLA DE LOGIN
+           ============================================ */
+        #login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--barber-black) 0%, #1a1a1e 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .login-box {
+            background: var(--barber-surface);
+            padding: 40px;
+            border-radius: 20px;
+            border: 2px solid var(--barber-orange);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 30px rgba(228,166,79,0.3);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .login-box h1 {
+            font-family: 'Playfair Display', serif;
+            color: var(--barber-orange);
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+        
+        .login-box p {
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+        }
+        
+        .pin-input {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        .pin-input input {
+            width: 50px;
+            height: 60px;
+            text-align: center;
+            font-size: 1.5rem;
+            border: 2px solid var(--barber-orange);
+            border-radius: 10px;
+            background: var(--barber-black);
+            color: var(--barber-white);
+            font-weight: bold;
+        }
+        
+        .pin-input input:focus {
+            outline: none;
+            box-shadow: 0 0 15px rgba(228,166,79,0.5);
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--barber-orange), #ff6f00);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255,111,0,0.4);
+        }
+        
+        .error-msg {
+            color: var(--barber-red);
+            margin-top: 15px;
+            display: none;
+        }
+        
+        /* ============================================
+           LAYOUT PRINCIPAL
+           ============================================ */
+        #admin-panel {
+            display: none;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        #panel-secreto {
+            display: none;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--barber-orange);
+        }
+        
+        .admin-header h1 {
+            font-family: 'Playfair Display', serif;
+            color: var(--barber-orange);
+            font-size: 2rem;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-header {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-logout {
+            background: var(--barber-gray);
+            color: white;
+        }
+        
+        .btn-refresh {
+            background: var(--barber-blue);
+            color: white;
+        }
+        
+        /* ============================================
+           GRID PRINCIPAL
+           ============================================ */
+        .admin-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+        
+        @media (max-width: 900px) {
+            .admin-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* ============================================
+           CARDS / SECCIONES
+           ============================================ */
+        .card {
+            background: var(--barber-surface);
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid rgba(228,166,79,0.2);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+        }
+        
+        .card h2 {
+            font-family: 'Playfair Display', serif;
+            color: var(--barber-orange);
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card h2::before {
+            content: '';
+            width: 4px;
+            height: 25px;
+            background: linear-gradient(to bottom, var(--barber-orange), var(--barber-red));
+            border-radius: 2px;
+        }
+        
+        /* ============================================
+           STATS DEL DÍA
+           ============================================ */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-box {
+            background: linear-gradient(145deg, #1e1f24, #16171b);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(228,166,79,0.3);
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--barber-orange);
+        }
+        
+
+        .jb-metricas-exp {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .jb-metrica-linea {
+            background: linear-gradient(145deg, #1e1f24, #16171b);
+            border: 1px solid rgba(228,166,79,0.3);
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin: 0;
+            color: #ddd;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        /* ============================================
+           LISTA DE RESERVAS HOY
+           ============================================ */
+        .reservas-hoy-lista {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .reserva-item {
+            background: linear-gradient(145deg, #1e1f24, #16171b);
+            border-left: 4px solid var(--barber-orange);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .reserva-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+        
+        .reserva-info h4 {
+            color: var(--barber-white);
+            margin-bottom: 5px;
+        }
+        
+        .reserva-info p {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .reserva-hora {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--barber-orange);
+        }
+        
+        .btn-eliminar {
+            background: var(--barber-red);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-eliminar:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(255,59,63,0.4);
+        }
+        
+        .sin-reservas {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+            font-style: italic;
+        }
+        
+        /* ============================================
+           CALENDARIO ADMIN
+           ============================================ */
+        .calendario-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .calendario-nav {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-nav {
+            background: var(--barber-gray);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .mes-titulo {
+            font-family: 'Playfair Display', serif;
+            color: var(--barber-orange);
+            font-size: 1.3rem;
+        }
+        
+        .dias-semana {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--barber-orange);
+            font-size: 0.85rem;
+        }
+        
+        .calendario-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+        
+        .dia-celda {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(145deg, #1e1f24, #16171b);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            position: relative;
+        }
+        
+        .dia-celda:hover {
+            transform: scale(1.05);
+            border-color: var(--barber-orange);
+        }
+        
+        .dia-celda.pasado {
+            opacity: 0.4;
+            background: #1a1a1e;
+        }
+        
+        .dia-celda.cerrado {
+            background: rgba(255,59,63,0.2);
+            border-color: var(--barber-red);
+        }
+        
+        .dia-celda.cerrado::after {
+            content: '🔒';
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            font-size: 0.7rem;
+        }
+        
+        .dia-celda.hoy {
+            border-color: var(--barber-orange);
+            box-shadow: 0 0 15px rgba(228,166,79,0.3);
+        }
+        
+        .dia-celda.seleccionado {
+            background: var(--barber-orange);
+            color: var(--barber-black);
+            font-weight: bold;
+        }
+        
+        .dia-numero {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .dia-reservas {
+            font-size: 0.7rem;
+            color: var(--barber-orange);
+            margin-top: 2px;
+        }
+        
+        /* ============================================
+           PANEL DE ACCIONES DEL DÍA
+           ============================================ */
+        .panel-dia {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(228,166,79,0.2);
+        }
+        
+        .panel-dia h3 {
+            color: var(--barber-orange);
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+        
+        .acciones-dia {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-accion {
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 140px;
+        }
+        
+        .btn-cerrar-dia {
+            background: var(--barber-red);
+            color: white;
+        }
+        
+        .btn-abrir-dia {
+            background: var(--barber-green);
+            color: white;
+        }
+        
+        .btn-ver-horarios {
+            background: var(--barber-blue);
+            color: white;
+        }
+        
+        /* ============================================
+           CONFIGURACIÓN RÁPIDA
+           ============================================ */
+        .config-section {
+            margin-bottom: 25px;
+        }
+        
+        .config-section h3 {
+            color: var(--barber-orange);
+            margin-bottom: 15px;
+            font-size: 1rem;
+        }
+        
+        .dias-semana-config {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .dia-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(145deg, #1e1f24, #16171b);
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .dia-checkbox:hover {
+            border-color: var(--barber-orange);
+        }
+        
+        .dia-checkbox input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--barber-red);
+        }
+        
+        .dia-checkbox.checked {
+            background: rgba(255,59,63,0.2);
+            border-color: var(--barber-red);
+        }
+        
+        .dia-checkbox.checked span {
+            color: var(--barber-red);
+        }
+        
+        /* ============================================
+           HORARIOS
+           ============================================ */
+        .horario-config {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .horario-box {
+            background: linear-gradient(145deg, #1e1f24, #16171b);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(228,166,79,0.2);
+        }
+        
+        .horario-box h4 {
+            color: var(--barber-orange);
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+        
+        .horas-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .hora-tag {
+            background: rgba(228,166,79,0.2);
+            color: var(--barber-orange);
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .btn-editar-horario {
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            background: var(--barber-gray);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        /* ============================================
+           MODAL DE EDICIÓN
+           ============================================ */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: var(--barber-surface);
+            padding: 30px;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 2px solid var(--barber-orange);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-header h3 {
+            color: var(--barber-orange);
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .btn-cerrar-modal {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .horas-editables {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .hora-btn {
+            padding: 10px;
+            border: 2px solid var(--barber-orange);
+            background: transparent;
+            color: var(--barber-orange);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .hora-btn.activa {
+            background: var(--barber-orange);
+            color: var(--barber-black);
+        }
+        
+        .hora-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        /* ============================================
+           BOTONES DE ACCIÓN GLOBAL
+           ============================================ */
+        .acciones-globales {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-peligro {
+            background: linear-gradient(135deg, #8b0000, var(--barber-red));
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-peligro:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255,59,63,0.4);
+        }
+        
+        .btn-secundario {
+            background: var(--barber-gray);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        /* ============================================
+           NOTIFICACIONES TOAST
+           ============================================ */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--barber-surface);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            border-left: 4px solid var(--barber-green);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 9999;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+        }
+        
+        .toast.error {
+            border-left-color: var(--barber-red);
+        }
+        
+        /* ============================================
+           RESPONSIVE
+           ============================================ */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            .admin-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .reservas-hoy-lista {
+                max-height: 200px;
+            }
+
+            .horario-config {
+                grid-template-columns: 1fr;
+            }
+
+            .calendario-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            .horas-editables {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .btn-header, .btn-nav, .btn-accion {
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+
+            .card {
+                padding: 15px;
+            }
+        }
+    /* ============================================
+   CALENDARIO ADMIN - RESPONSIVE FIX
+   ============================================ */
+
+/* Ajuste para móviles - días más pequeños y compactos */
+@media (max-width: 600px) {
+    .dias-semana {
+        font-size: 0.7rem;
+        gap: 4px;
+    }
+    
+    .dias-semana div {
+        padding: 5px 2px;
+    }
+    
+    .calendario-grid {
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+    }
+    
+    .dia-celda {
+        min-height: 45px;
+        padding: 4px 2px;
+        font-size: 0.85rem;
+    }
+    
+    .dia-numero {
+        font-size: 0.9rem;
+    }
+    
+    .dia-reservas {
+        font-size: 0.6rem;
+        margin-top: 1px;
+    }
+    
+    /* Ajustar el badge de reservas si existe */
+    .badge-reservas {
+        font-size: 0.6rem;
+        min-width: 14px;
+        height: 14px;
+        padding: 0 2px;
+        top: 1px;
+        right: 1px;
+    }
+}/* Extra compacto para pantallas muy pequeñas */
+@media (max-width: 400px) {
+    .dias-semana {
+        font-size: 0.6rem;
+        gap: 2px;
+    }
+    
+    .calendario-grid {
+        gap: 2px;
+    }
+    
+    .dia-celda {
+        min-height: 38px;
+        padding: 2px 1px;
+        border-radius: 6px;
+    }
+    
+    .dia-numero {
+        font-size: 0.8rem;
+    }
+    
+    .dia-celda.cerrado::after {
+        font-size: 0.5rem;
+        bottom: 1px;
+        right: 1px;
+    }
+}
+
+
+
+
+@keyframes aparecerConPulso {
+    0% {
+        opacity: 1;
+        transform: translateY(15px);
+        box-shadow: 0 0 0 rgba(0, 255, 0, 0);
+        border-top: 4px solid green;
+    }
+    25% {
+        opacity: 2;
+        transform: translateY(20px);
+        box-shadow: 0 0 22px rgba(0, 255, 0, 0.35); /* Destello verde llamativo */
+        border-top: 4px solid lime;
+    }
+    50% {
+        opacity: 1;
+        transform: translateY(15px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+        0% {
+        opacity: 1;
+        transform: translateY(15px);
+        box-shadow: 0 0 0 rgba(0, 255, 0, 0);
+        border-top: 4px solid orange;
+    }
+    75% {
+        opacity: 2;
+        transform: translateY(20px);
+        box-shadow: 0 0 22px rgba(255, 145, 0, 0.35); /* Destello verde llamativo */
+        border-top: 4px solid orangered;
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(15px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        border-top: 4px solid red;
+    }
+}
+
+@keyframes aparecerConPulsometrica {
+    0% {
+       background-image: linear-gradient(to bottom, lime, darkgreen);
+    }
+    25% {
+         background-image: linear-gradient(to bottom, darkgreen, lime);
+    }
+    50% {
+        background-image: linear-gradient(to bottom, var(--barber-orange), var(--barber-red));
+
+    }
+        0% {
+            background-image: linear-gradient(to bottom, lime, darkgreen);
+    }
+    75% {
+         
+        background-image: linear-gradient(to bottom, var(--barber-orange), var(--barber-red));
+
+    }
+    100% {
+               
+
+
+    }
+}
+
+.tarjeta-animada {
+    animation: aparecerConPulso 5.9s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+.jb-metrica-linea{
+    animation: aparecerConPulsometrica 5.9s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+    
+}
+</style>
+
+
+
+
+<style>
+/* ============================================
+   LICENCIA DEL ASISTENTE — Palma Codes
+   ============================================ */
+.jbLic{--lic-c:#33d17a;--lic-bg:rgba(51,209,122,.10);position:relative;margin-top:14px;padding:18px 20px 16px 22px;border-radius:10px;background:linear-gradient(135deg,#1d1e23 0%,#17181c 100%);border:1px solid rgba(228,166,79,.22);overflow:hidden;font-family:'Poppins',sans-serif;color:#e5e7eb}
+.jbLic::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--lic-c)}
+.jbLic--porvencer{--lic-c:#e4a64f;--lic-bg:rgba(228,166,79,.12)}
+.jbLic--vencido,.jbLic--suspendido{--lic-c:#ff3b3f;--lic-bg:rgba(255,59,63,.12);border-color:rgba(255,59,63,.45);box-shadow:0 0 28px rgba(255,59,63,.12)}
+.jbLic-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.jbLic-title{font-family:'Playfair Display',serif;font-weight:700;font-size:1.05rem;color:var(--barber-orange,#e4a64f)}
+.jbLic-pill{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border-radius:999px;background:var(--lic-bg);border:1px solid var(--lic-c);color:var(--lic-c);font-size:.78rem;font-weight:700;letter-spacing:.02em}
+.jbLic-dot{width:8px;height:8px;border-radius:50%;background:var(--lic-c);flex-shrink:0}
+.jbLic--activo .jbLic-dot,.jbLic--porvencer .jbLic-dot{animation:jbLicPulse 2s ease-in-out infinite}
+@keyframes jbLicPulse{0%,100%{opacity:1}50%{opacity:.35}}
+.jbLic-body{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.jbLic-amount small,.jbLic-count small{display:block;font-size:.74rem;color:#8b8d96;margin-bottom:2px}
+.jbLic-amount strong{font-size:1.9rem;font-weight:700;color:#fff;line-height:1.1;font-variant-numeric:tabular-nums}
+.jbLic-count{text-align:right}
+.jbLic-count strong{font-size:1.9rem;font-weight:700;line-height:1.1;color:var(--lic-c);font-variant-numeric:tabular-nums}
+.jbLic-bar{height:6px;border-radius:999px;background:rgba(255,255,255,.07);margin:14px 0 10px;overflow:hidden}
+.jbLic-bar span{display:block;height:100%;border-radius:999px;background:var(--lic-c);transition:width .8s ease}
+.jbLic-meta{font-size:.82rem;color:#aeb0b8}
+.jbLic-meta b{color:#fff;font-weight:600}
+.jbLic-alert{margin-top:14px;padding:12px 14px;border-radius:8px;background:var(--lic-bg);border:1px solid rgba(255,59,63,.35);font-size:.84rem;line-height:1.5;color:#ffd9da}
+.jbLic-btn{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;padding:13px 18px;border-radius:10px;border:none;cursor:pointer;text-decoration:none;font-family:'Poppins',sans-serif;font-weight:700;font-size:.95rem;color:#fff;background:linear-gradient(135deg,#e4a64f 0%,#ff5a2a 55%,#ff3b3f 100%);box-shadow:0 8px 22px rgba(255,90,42,.28);transition:transform .15s ease,box-shadow .15s ease}
+.jbLic-btn:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(255,90,42,.4)}
+.jbLic-btn:focus-visible,.jbLicChip-btn:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.jbLic-btn svg{width:20px;height:20px;flex-shrink:0}
+.jbLic-foot{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06);font-size:.72rem;color:#6f717a;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.jbLic-foot b{color:var(--barber-orange,#e4a64f);font-weight:600}
+/* chip compacto */
+.jbLicChip{--lic-c:#33d17a;--lic-bg:rgba(51,209,122,.12);display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;padding:6px 8px 6px 12px;border-radius:999px;background:var(--lic-bg);border:1px solid var(--lic-c);color:#fff;font-size:.74rem;font-weight:600;font-family:'Poppins',sans-serif}
+.jbLicChip--porvencer{--lic-c:#e4a64f;--lic-bg:rgba(228,166,79,.14)}
+.jbLicChip--vencido,.jbLicChip--suspendido{--lic-c:#ff3b3f;--lic-bg:rgba(255,59,63,.14)}
+.jbLicChip .jbLic-dot{width:7px;height:7px}
+.jbLicChip:not(:has(.jbLicChip-btn)){padding-right:12px}
+.jbLicChip-btn{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;text-decoration:none;font-size:.72rem;font-weight:700;color:#fff;background:linear-gradient(135deg,#e4a64f,#ff3b3f)}
+.jbLicChip-btn svg{width:13px;height:13px}
+.jbLicSlot[data-lic="chip"]{display:flex;justify-content:center}
+.jbLicSlot[data-lic="mini"]{display:flex;align-items:center;white-space:nowrap}
+.jbLicMini{font-size:.76rem;font-weight:600;color:#aeb0b8}
+.jbLicMini.porvencer{color:#e4a64f}
+.jbLicSlot[data-lic="mini"] .jbLicChip-btn{padding:6px 14px;font-size:.76rem}
+#jbEstadoCard.jbLic-off{background:linear-gradient(135deg,rgba(255,59,63,.10),rgba(255,59,63,.02));border-color:rgba(255,59,63,.35)}
+#jbEstadoCard.jbLic-off .jbEstadoTitulo{color:#ffd9da}
+#jbEstadoCard.jbLic-off .jbEstadoDot{background:#ff3b3f;animation:none}
+#jbEstadoCard.jbLic-warn .jbEstadoDot{background:#e4a64f}
+@media (prefers-reduced-motion:reduce){.jbLic-dot,.jbEstadoDot{animation:none!important}.jbLic-bar span,.jbLic-btn{transition:none}}
+@media (max-width:480px){.jbLic-amount strong,.jbLic-count strong{font-size:1.5rem}}
+</style>
+
+<style>
+/* Aviso "volvió al calendario" (solo con bot apagado o cuota vencida) */
+.jbCal{margin-top:14px;padding:18px 20px 18px 22px;border-radius:10px;background:linear-gradient(135deg,#1d1e23,#17181c);border:1px solid rgba(228,166,79,.35);font-family:'Poppins',sans-serif;color:#e5e7eb;display:flex;gap:20px;align-items:center;position:relative;overflow:hidden}
+.jbCal::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(to bottom,#e4a64f,#ff3b3f)}
+.jbCal-img{flex:0 0 180px;width:180px;aspect-ratio:1/1;border-radius:12px;border:2px solid #e4a64f;overflow:hidden;background:#121318;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.jbCal-img img,.jbCal-img svg{width:100%;height:100%;object-fit:cover;display:block}
+.jbCal-txt{flex:1;min-width:0}
+.jbCal-t{font-family:'Playfair Display',serif;font-weight:700;font-size:1.15rem;color:var(--barber-orange,#e4a64f);margin-bottom:8px}
+.jbCal-p{font-size:.9rem;line-height:1.55;color:#cfd0d6;margin:0}
+.jbCal-p b{color:#fff}
+@media (max-width:560px){.jbCal{flex-direction:column;align-items:stretch;text-align:center}.jbCal-img{align-self:center}}
+</style>
+<style>
+/* Layout por prioridad: las columnas se aplanan y cada módulo se ordena con "order" */
+.admin-grid{align-items:start}
+.columna-izquierda,.columna-derecha{display:contents}
+#jbLicPanel{grid-column:1/-1}
+#jbLicPanel .jbLic{margin-top:0}
+#jbLicPanel[data-nivel="2"] .jbLic{box-shadow:0 0 26px rgba(228,166,79,.22)}
+#jbLicPanel[data-nivel="3"] .jbLic{box-shadow:0 0 34px rgba(255,59,63,.25)}
+.jbEstadoCard{position:static!important;height:auto!important;min-height:48px;margin-bottom:18px}
+.jbLicSlot[data-lic="box"]{display:block}
+.jbBoxTxt{font-size:.72rem;font-weight:700;color:#33d17a}.jbBoxTxt.porvencer{color:#e4a64f}.jbBoxTxt.off{color:#ff3b3f}
+/* Aviso de pago al entrar */
+.jbMod{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.78);backdrop-filter:blur(4px);font-family:'Poppins',sans-serif}
+.jbMod-box{--c:#e4a64f;width:100%;max-width:400px;padding:28px 24px 22px;border-radius:16px;text-align:center;background:linear-gradient(160deg,#1d1e23,#121318);border:1px solid var(--c);box-shadow:0 0 44px rgba(0,0,0,.6),0 0 30px color-mix(in srgb,var(--c) 30%,transparent);color:#e5e7eb}
+.jbMod-box.off{--c:#ff3b3f}
+.jbMod-ico{font-size:2.2rem;margin-bottom:8px}
+.jbMod-box h3{font-family:'Playfair Display',serif;font-size:1.45rem;color:var(--c);margin-bottom:10px}
+.jbMod-box p{font-size:.92rem;line-height:1.55;color:#cfd0d6;margin-bottom:16px}
+.jbMod-dato{display:flex;justify-content:space-around;gap:10px;padding:12px;border-radius:10px;background:#0e0f13;border:1px solid rgba(255,255,255,.07);margin-bottom:16px}
+.jbMod-dato small{display:block;font-size:.7rem;color:#8b8d96}.jbMod-dato b{font-size:1rem;color:#fff}
+.jbMod-later{margin-top:10px;width:100%;padding:11px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:#aeb0b8;font-family:'Poppins',sans-serif;font-size:.88rem;cursor:pointer}
+.jbMod-later:hover{color:#fff;border-color:#fff}.jbMod-later:focus-visible{outline:2px solid #fff;outline-offset:3px}
+</style>
+</head>
+<body>
+
+    <!-- ============================================
+         PANTALLA DE LOGIN
+    ============================================ -->
+    <div id="login-screen">
+        <div class="login-box">
+            <h1>🔒 Panel de Control</h1>
+            <p>Ingresa tu clave de barbero</p>
+            
+            <div class="pin-input">
+                <input type="password" maxlength="1" data-index="0">
+                <input type="password" maxlength="1" data-index="1">
+                <input type="password" maxlength="1" data-index="2">
+                <input type="password" maxlength="1" data-index="3">
+            </div>
+            
+            <button class="btn-login" onclick="verificarLogin()">Ingresar</button>
+            <p class="error-msg" id="login-error">Clave incorrecta</p>
+        </div>
+    </div>
+
+    <!-- ============================================
+         PANEL ADMIN (oculto inicialmente)
+    ============================================ -->
+   <div id="admin-panel">
+        
+        <!-- Header -->
+        <div class="admin-header">
+            <h1>💈 Panel de Administración</h1>
+            <div class="header-actions"><!-- ============================================
+     SECCIÓN GALERÍA - ADMIN
+     ============================================ -->
+<!-- ============================================
+     SECCIÓN GALERÍA - ADMIN
+     ============================================ -->
+     <!-- ============================================
+     ESTADO DEL ASISTENTE — indicador silencioso, sin popups
+     ============================================ -->
+<style>
+  .jbEstadoCard {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap; position: absolute;
+    background: linear-gradient(135deg, rgba(51,209,122,0.08), rgba(51,209,122,0.02));
+    border: 1px solid rgba(51,209,122,0.25); border-radius: 12px;
+    height: 48px; font-size: 0.85rem; color: #cdeedb; width: 100%;
+    padding: 14px 18px; margin-bottom: 4px;
+    
+    
+  }
+  .jbEstadoDot { width: 9px; height: 9px; border-radius: 50%; background: var(--barber-green, #33d17a); flex-shrink: 0; animation: jbEstadoPulse 2s ease-in-out infinite; }
+  @keyframes jbEstadoPulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+   @keyframes jbEstadoPulseBlue { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+  .jbEstadoTitulo { color: #cdeedb; font-size: 0.85rem; font-weight: 600; }
+  .jbEstadoStats { display: flex; gap: 18px; margin-left: auto; flex-wrap: wrap; }
+  .jbEstadoStat { text-align: center; }
+  .jbEstadoStat .num { color: #fff; font-size: 1.05rem; font-weight: 800; display: block; }
+  .jbEstadoStat .label { color: #8fa; font-size: 0.68rem; opacity: 0.8; }
+</style>
+<div class="jbEstadoCard" id="jbEstadoCard">
+  <span class="jbEstadoDot"></span>
+  <span class="jbEstadoTitulo" id="jbEstadoTitulo">Asistente activo</span>
+  <div class="jbEstadoStats">
+    <div class="jbLicSlot" data-lic="mini"></div>
+  </div>
+</div>
+<script>
+window.addEventListener('load', function(){
+  function jbEsHoy(ts){
+    if(!ts) return false;
+    const d = new Date(ts), hoy = new Date();
+    return d.getFullYear()===hoy.getFullYear() && d.getMonth()===hoy.getMonth() && d.getDate()===hoy.getDate();
+  }
+  db.ref('chats').on('value', snap => {
+    const chats = snap.val() || {};
+    const hoyCount = Object.values(chats).filter(c => jbEsHoy(c.ultimaActividad)).length;
+    const el = document.getElementById('jbEstadoConversacionesHoy');
+    if(el) el.textContent = hoyCount;
+  });
+  db.ref('reservas').on('value', snap => {
+    const reservas = snap.val() || {};
+    const haceUnaSemana = Date.now() - 7*24*60*60*1000;
+    const count = Object.values(reservas).filter(r => r.origen === 'chat' && r.timestamp && r.timestamp >= haceUnaSemana).length;
+    const el = document.getElementById('jbEstadoReservasSemana');
+    if(el) el.textContent = count;
+  });
+});
+
+</script>
+
+<!-- ============================================
+     SECCIÓN GALERÍA - ADMIN
+     ============================================ -->
+<!-- ============================================
+     SECCIÓN GALERÍA - ADMIN
+     ============================================ -->
+
+<!-- ============================================
+     ESTADÍSTICAS SIMPLES
+     ============================================ -->
+
+<div class="card" id="card-estadisticas" style="border:1px solid rgba(228,166,79,.2);"><h2 style="color:var(--barber-orange);margin-bottom:16px;">📊 Estadísticas</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px;">
+    <div style="background:#12131A;border-radius:12px;padding:14px;text-align:center;border:1px solid rgba(228,166,79,0.15);">
+      <span id="stat-reservas-hoy" style="display:block;font-size:2rem;font-weight:800;color:#fff;">–</span>
+      <span style="font-size:0.72rem;color:#888;">Reservas hoy</span>
+    </div>
+    <div style="background:#12131A;border-radius:12px;padding:14px;text-align:center;border:1px solid rgba(228,166,79,0.15);">
+      <span id="stat-reservas-semana" style="display:block;font-size:2rem;font-weight:800;color:#e4a64f;">–</span>
+      <span style="font-size:0.72rem;color:#888;">Esta semana</span>
+    </div>
+    <div style="background:#12131A;border-radius:12px;padding:14px;text-align:center;border:1px solid rgba(228,166,79,0.15);">
+      <span id="stat-reservas-mes" style="display:block;font-size:2rem;font-weight:800;color:#33d17a;">–</span>
+      <span style="font-size:0.72rem;color:#888;">Este mes</span>
+    </div>
+    <div style="background:#12131A;border-radius:12px;padding:14px;text-align:center;border:1px solid rgba(228,166,79,0.15);">
+      <span id="stat-ingresos-mes" style="display:block;font-size:1.3rem;font-weight:800;color:#29b6f6;">–</span>
+      <span style="font-size:0.72rem;color:#888;">Ingresos este mes</span>
+    </div>
+    <div style="background:#12131A;border-radius:12px;padding:14px;text-align:center;border:1px solid rgba(228,166,79,0.15);">
+      <span id="jbEstadoReservasSemana" style="display:block;font-size:2rem;font-weight:800;color:#e4a64f;">–</span>
+      <span style="font-size:0.72rem;color:#888;">Reservas del asistente esta semana</span>
+      <div class="jbLicSlot" data-lic="box" style="margin-top:6px"></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div style="background:#12131A;border-radius:12px;padding:14px;border:1px solid rgba(228,166,79,0.15);">
+      <p style="font-size:0.75rem;color:#888;margin-bottom:8px;">✂️ Servicio más pedido</p>
+      <p id="stat-servicio-top" style="font-size:0.95rem;font-weight:700;color:#fff;">–</p>
+    </div>
+    <div style="background:#12131A;border-radius:12px;padding:14px;border:1px solid rgba(228,166,79,0.15);">
+      <p style="font-size:0.75rem;color:#888;margin-bottom:8px;">🕐 Hora más reservada</p>
+      <p id="stat-hora-top" style="font-size:0.95rem;font-weight:700;color:#fff;">–</p>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  function esFechaEnRango(fechaStr, desde, hasta){
+    if(!fechaStr) return false;
+    return fechaStr >= desde && fechaStr <= hasta;
+  }
+  function fechaStr(d){ return d.toISOString().slice(0,10); }
+
+ window.addEventListener('load', function(){
+    // Forzar fecha actual exacta en zona horaria de Chile (Santiago)
+    const hoyS = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Santiago' });
+    
+    // Parsear la fecha local de Chile sin desfase UTC
+    const [year, month, day] = hoyS.split('-').map(Number);
+    const hoy = new Date(year, month - 1, day);
+    
+    // Calcular el lunes de esta semana en hora local
+    const lunes = new Date(hoy); 
+    lunes.setDate(hoy.getDate() - ((hoy.getDay() + 6) % 7));
+    const lunesS = `${lunes.getFullYear()}-${String(lunes.getMonth() + 1).padStart(2, '0')}-${String(lunes.getDate()).padStart(2, '0')}`;
+    
+    const mesS = hoyS.slice(0, 7); // "YYYY-MM"
+
+    db.ref('reservas').on('value', snap => {
+      const reservas = snap.val() || {};
+      const lista = Object.values(reservas);
+
+      // Contadores
+      let resHoy=0, resSemana=0, resMes=0, ingresosMes=0;
+      const contServicios = {};
+      const contHoras = {};
+
+      lista.forEach(r => {
+        const f = r.fecha || '';
+        if(f === hoyS) resHoy++;
+        if(f >= lunesS && f <= hoyS) resSemana++;
+        if(f.startsWith(mesS)){
+          resMes++;
+          // Ingresos: extraer número del total guardado
+          const totalNum = parseInt((r.total||'').replace(/\D/g,'')) || 0;
+          ingresosMes += totalNum;
+          // Servicio más pedido
+          const srv = r.servicios || r.servicio || '';
+          srv.split('+').forEach(s => {
+            const k = s.trim();
+            if(k) contServicios[k] = (contServicios[k]||0)+1;
+          });
+          // Hora más reservada
+          const h = (r.hora||'').slice(0,5);
+          if(h) contHoras[h] = (contHoras[h]||0)+1;
+        }
+      });
+
+      const topServicio = Object.entries(contServicios).sort((a,b)=>b[1]-a[1])[0];
+      const topHora = Object.entries(contHoras).sort((a,b)=>b[1]-a[1])[0];
+
+      const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+      set('stat-reservas-hoy', resHoy);
+      set('stat-reservas-semana', resSemana);
+      set('stat-reservas-mes', resMes);
+      set('stat-ingresos-mes', ingresosMes>0 ? '$'+ingresosMes.toLocaleString('es-CL') : '–');
+      set('stat-servicio-top', topServicio ? `${topServicio[0]} (${topServicio[1]}×)` : '–');
+      set('stat-hora-top', topHora ? `${topHora[0]} (${topHora[1]}×)` : '–');
+    });
+  });
+})();
+</script>
+<div class="card galeria-card" hidden>
+    <h2>🖼️ PROMOCIONES</h2>
+    
+   <div class="upload-section">
+    <input type="file" id="input-imagen" accept="image/*" hidden>
+    
+    <!-- Botón mejorado para móvil y PC -->
+    <button class="btn-subir-imagen" type="button" id="btn-subir">
+        <span class="icono-upload">📷</span>
+        <span class="texto-upload">Sube tus promociones</span>
+    </button>
+    
+    <p class="upload-hint">Toca para elegir de galería o cámara</p>
+</div>
+    
+    <div class="galeria-grid" id="galeria-grid">
+        <div class="galeria-vacio" id="galeria-vacio">
+            <span class="icono-vacio">🖼️</span>
+            <p>No hay imágenes aún</p>
+            <span class="subtexto">Sube tu primer trabajo para mostrarlo</span>
+        </div>
+    </div>
+</div>
+            </div>
+        </div>
+ <style>
+
+ </style>       
+        <!-- Grid Principal -->
+        <div class="admin-grid">
+            
+            <!-- COLUMNA IZQUIERDA -->
+            <div class="columna-izquierda">
+<div id="jbLicPanel" data-nivel="0"><div class="jbLicSlot" data-lic="full"></div><div class="jbLicSlot" data-lic="preview"></div></div>
+<p style="margin:14px 0;padding:12px 14px;border-left:4px solid #e4a64f;border-radius:8px;background:#1b1c20;color:#cfd0d6;font-size:.82rem;line-height:1.5;">Retención: se conservan todas las reservas del mes actual y se limpian las de meses anteriores al abrir el Admin (y mientras permanezca abierto). No hay una tarea en segundo plano si el Admin está cerrado.</p>
+<section id="jbBackupReminder" role="status" aria-live="polite" hidden style="margin-top:18px;padding:18px;border:1px solid #e4a64f;border-left:5px solid #e4a64f;border-radius:12px;background:linear-gradient(145deg,#292319,#1b1c20);color:#f5f2eb;box-shadow:0 10px 28px rgba(0,0,0,.24);">
+    <h2 style="margin:0 0 8px;color:#f1c887;font-size:1.05rem;">🛡️ Aviso anual de copia de seguridad</h2>
+    <p id="jbBackupReminderStatus" style="margin:0 0 12px;line-height:1.55;color:#e5e7eb;"></p>
+    <p id="jbBackupReminderCountdown" style="margin:0 0 12px;color:#f1c887;font-weight:700;"></p>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+        <a id="jbBackupReminderLink" href="https://wa.me/56954998792" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:11px 16px;border-radius:10px;background:#25d366;color:#102117;text-decoration:none;font-weight:800;text-align:center;">Abrir WhatsApp y enviar aviso</a>
+        <button id="jbBackupMarkReminder" type="button" hidden style="min-height:46px;padding:11px 16px;border:1px solid #25d366;border-radius:10px;background:#153b28;color:#fff;font-weight:700;cursor:pointer;">Ya envié el aviso</button>
+    </div>
+    <p id="jbBackupReminderHelp" style="margin:10px 0 0;color:#b9b9b9;font-size:.82rem;line-height:1.45;">El barbero solo envía el aviso anual a Palma Codes. La limpieza mensual conserva todas las reservas del mes en curso.</p>
+</section>
+<div id="jbBackupGate" hidden role="dialog" aria-modal="true" aria-labelledby="jbBackupGateTitle" style="position:fixed;inset:0;z-index:1000000;background:rgba(0,0,0,.86);display:none;align-items:center;justify-content:center;padding:18px;">
+    <div style="width:min(100%,520px);padding:24px;border:2px solid #e4a64f;border-radius:16px;background:#1b1c20;color:#fff;box-shadow:0 20px 60px rgba(0,0,0,.55);">
+        <h2 id="jbBackupGateTitle" style="margin:0 0 12px;color:#f1c887;">⚠️ Recordatorio anual obligatorio</h2>
+        <p id="jbBackupGateStatus" style="line-height:1.55;"></p>
+        <a id="jbBackupGateLink" href="https://wa.me/56954998792" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center;min-height:48px;padding:12px;border-radius:10px;background:#25d366;color:#102117;text-decoration:none;font-weight:800;text-align:center;">Abrir WhatsApp para avisar a Palma Codes</a>
+        <button id="jbBackupGateAcknowledge" type="button" hidden style="width:100%;min-height:48px;margin-top:10px;padding:12px;border:1px solid #25d366;border-radius:10px;background:#153b28;color:#fff;font-weight:800;cursor:pointer;">Ya envié el aviso</button>
+        <p style="margin:12px 0 0;color:#b9b9b9;font-size:.84rem;">El barbero solo debe enviar y registrar el aviso. Palma Codes descargará y guardará el respaldo JSON de la carpeta reservas.</p>
+    </div>
+</div>
+<!-- EXPERIENCIA DE RESERVA (solo métricas positivas) -->
+<div class="card tarjeta-animada" style="margin-top: 25px; background: #1D1E22;  border-radius: 8px; padding: 20px; color: #fff;">
+    <h2 style="font-family: 'Playfair Display', serif; color: var(--barber-orange); margin-bottom: 15px; font-size: 1.2rem; display: flex; align-items: center; gap: 10px;">
+        🤖 RESULTADOS NUEVO SISTEMA
+    </h2> 
+    <img src="bannerasesor.png" alt="" style="width: 100%; border-radius: 8px; margin-bottom: 15px;">
+    
+    <div class="jb-metricas-exp" style="display: flex; flex-direction: column; gap: 10px;">
+        <p class="jb-metrica-linea" id="m-facilidad" style="background-color: #222226;  background-size: 4px 100%; background-repeat: no-repeat; padding: 12px 16px 12px 20px; border-radius: 6px; margin: 0; font-size: 0.95rem; color: #e5e7eb;">⚡ Sin datos aún</p>
+        <p class="jb-metrica-linea" id="m-tiempo" style="background-color: #222226;  background-size: 4px 100%; background-repeat: no-repeat; padding: 12px 16px 12px 20px; border-radius: 6px; margin: 0; font-size: 0.95rem; color: #e5e7eb;">⏱ Sin datos aún</p>
+        <p class="jb-metrica-linea" id="m-preferencia" style="background-color: #222226;  background-size: 4px 100%; background-repeat: no-repeat; padding: 12px 16px 12px 20px; border-radius: 6px; margin: 0; font-size: 0.95rem; color: #e5e7eb;">📅 Sin datos aún</p>
+    </div>
+</div><br><br>
+                <!-- STATS Y RESERVAS DE HOY -->
+                <div class="card">
+                    <h2>📋 Hoy - <span id="fecha-hoy"></span></h2>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-number" id="stat-total">0</div>
+                            <div class="stat-label">Reservas</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number" id="stat-ingresos">$0</div>
+                            <div class="stat-label">Ingresos</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number" id="stat-pendientes">0</div>
+                            <div class="stat-label">Pendientes</div>
+                        </div>
+                    </div>
+                    
+                    <div class="reservas-hoy-lista" id="reservas-hoy-lista">
+                        <div class="sin-reservas">No hay reservas para hoy</div>
+                    </div>
+                </div>
+
+          
+                
+                <!-- CONFIGURACIÓN RÁPIDA -->
+                <div class="card" style="margin-top: 25px;">
+                    <h2>⚙️ Configuración Rápida</h2>
+                    
+                    <div hidden class="config-section">
+                        <h3>Días de descanso semanales</h3>
+                        <p style="color: #666; font-size: 0.85rem; margin-bottom: 10px;">
+                            Marca los días que la barbería SIEMPRE está cerrada
+                        </p>
+                        <div class="dias-semana-config" id="dias-semana-config">
+                            <!-- Se genera con JS -->
+                        </div>
+                    </div>
+                    
+                    <div class="config-section">
+                        <h3>Horarios de atención</h3>
+                        <div class="horario-config">
+                            <div class="horario-box">
+                                <h4>Lunes a Sábado</h4>
+                                <div class="horas-tags" id="horario-semana-tags"></div>
+                                <button class="btn-editar-horario" onclick="editarHorario('semana')">Editar HORARIO</button>
+                            </div>
+                            <div class="horario-box">
+                                <h4>Domingos</h4>
+                                <div class="horas-tags" id="horario-domingo-tags"></div>
+                                <button class="btn-editar-horario" onclick="editarHorario('domingo')">Editar HORARIO</button>
+                        <br><br><br>    <button class="btn-accion" id="btn-toggle-domingos" onclick="toggleTodosDomingos()" style="width:100%;background:var(--barber-red);color:#fff;">
+    🔒 Cerrar TODOS los domingos
+</button>    </div>
+                        </div>
+                    </div>
+                    
+           
+
+                </div>
+                
+            </div>
+            
+            <!-- COLUMNA DERECHA -->
+            <div class="columna-derecha">
+                
+                <!-- CALENDARIO -->
+                <div class="card">
+                    <h2>📅 Calendario de Reservas</h2>
+                    
+                    <div class="calendario-header">
+                        <div class="calendario-nav">
+                            <button class="btn-nav" onclick="cambiarMes(-1)">←</button>
+                            <button class="btn-nav" onclick="irAHoy()">Hoy</button>
+                            <button class="btn-nav" onclick="cambiarMes(1)">→</button>
+                        </div>
+                        <div class="mes-titulo" id="mes-titulo">Abril 2026</div>
+                    </div>
+                    
+                    <div class="dias-semana">
+                        <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div>
+                        <div>Jue</div><div>Vie</div><div>Sáb</div>
+                    </div>
+                    
+                    <div class="calendario-grid" id="calendario-grid">
+                        <!-- Se genera con JS -->
+                    </div>
+                    
+                    <!-- Modal de reservas del día seleccionado -->
+                    <div class="modal-overlay" id="panel-dia">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h3>Reservas <span id="dia-seleccionado-texto"></span></h3>
+                                <button class="btn-cerrar-modal" style="color: red; font-size: 330%;" onclick="cerrarPanelDia()">×</button>
+                            </div>
+                            <div class="acciones-dia">
+                                <button class="btn-accion btn-cerrar-dia" id="btn-cerrar-dia" onclick="toggleDiaCerrado();actualizarPagina()">
+                                    🔒 Cerrar día
+                                </button>
+                                <button class="btn-accion btn-abrir-dia" id="btn-abrir-dia" onclick="toggleDiaCerrado();actualizarPagina()">
+                                    🔓 Abrir día
+                                </button>
+                                <button class="btn-accion btn-ver-horarios" onclick="editarHorarioEspecifico()">
+                                    ⚙️ Horario especial
+                                </button>
+                            </div>
+
+                            <!-- Lista de reservas del día seleccionado -->
+                            <div id="reservas-dia-seleccionado" style="margin-top: 20px;">
+                                <!-- Se llena con JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+        <!-- ============================================
+         PANEL SECRETO (oculto — solo con la clave secreta)
+    ============================================ -->
+    <div id="panel-secreto">
+        <div class="admin-header">
+            <h1>🕵️ Seguimiento de Clientes</h1>
+            <div class="header-actions">
+                <button class="btn-logout" onclick="logout()">Salir</button>
+            </div>
+        </div>
+        <section id="jbBackupDeveloper" hidden style="margin:18px 0;padding:18px;border:1px solid #e4a64f;border-left:5px solid #e4a64f;border-radius:12px;background:linear-gradient(145deg,#292319,#1b1c20);color:#f5f2eb;">
+            <h2 style="margin:0 0 8px;color:#f1c887;font-size:1.05rem;">🛡️ Respaldo anual — Palma Codes</h2>
+            <p id="jbBackupDeveloperStatus" style="margin:0 0 12px;line-height:1.55;color:#e5e7eb;">Consultando el estado del recordatorio…</p>
+            <p id="jbBackupDeveloperCountdown" style="margin:0 0 12px;color:#f1c887;font-weight:700;"></p>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;">
+                <button id="jbBackupDeveloperDownload" type="button" disabled style="min-height:46px;padding:11px 16px;border:1px solid #e4a64f;border-radius:10px;background:#3a2c18;color:#fff;font-weight:700;cursor:pointer;">Descargar copia JSON</button>
+                <button id="jbBackupDeveloperConfirm" type="button" hidden style="min-height:46px;padding:11px 16px;border:0;border-radius:10px;background:#e4a64f;color:#21180a;font-weight:800;cursor:pointer;">Confirmar copia guardada</button>
+            </div>
+            <p style="margin:10px 0 0;color:#b9b9b9;font-size:.82rem;line-height:1.45;">El botón se activa cuando el barbero registra el aviso. Descarga solo /reservas y guarda el JSON en un lugar seguro; confirma después de comprobarlo. La limpieza mensual conserva siempre el mes actual. Esta página no limpia mientras está cerrada y no controla el crecimiento de las demás ramas de Firebase.</p>
+        </section>
+        <section id="jbPushDeveloper" style="margin:18px 0;padding:18px;border:1px solid #e4a64f;border-left:5px solid #e4a64f;border-radius:12px;background:linear-gradient(145deg,#292319,#1b1c20);color:#f5f2eb;">
+            <h2 style="margin:0 0 8px;color:#f1c887;font-size:1.05rem;">🔔 Probar recordatorios en este dispositivo</h2>
+            <p style="margin:0 0 12px;line-height:1.5;color:#e5e7eb;">La prueba envía una notificación a este navegador. No crea ni cancela reservas. Funciona en Android y escritorio compatibles; iPhone/iPad quedan excluidos.</p>
+            <label style="display:block;margin:8px 0 4px;font-size:.85rem;" for="jbPushDevEmail">Correo de la cuenta de desarrollador</label>
+            <input id="jbPushDevEmail" type="email" autocomplete="username" style="width:100%;max-width:420px;padding:11px;border:1px solid #56565c;border-radius:8px;background:#111216;color:#fff;">
+            <label style="display:block;margin:8px 0 4px;font-size:.85rem;" for="jbPushDevPassword">Contraseña</label>
+            <input id="jbPushDevPassword" type="password" autocomplete="current-password" style="width:100%;max-width:420px;padding:11px;border:1px solid #56565c;border-radius:8px;background:#111216;color:#fff;">
+            <div style="display:flex;flex-wrap:wrap;gap:9px;margin-top:12px;">
+                <button id="jbPushDevLogin" type="button" style="min-height:44px;padding:10px 14px;border:1px solid #e4a64f;border-radius:9px;background:#3a2c18;color:#fff;font-weight:700;cursor:pointer;">Validar cuenta</button>
+                <button id="jbPushDeviceEnable" type="button" style="min-height:44px;padding:10px 14px;border:0;border-radius:9px;background:linear-gradient(135deg,#f1c879,#e4a64f);color:#21180a;font-weight:800;cursor:pointer;">Activar avisos en este dispositivo</button>
+                <button id="jbPushTestSend" type="button" disabled style="min-height:44px;padding:10px 14px;border:1px solid #25d366;border-radius:9px;background:#153b28;color:#fff;font-weight:800;cursor:pointer;">Enviar notificación de prueba</button>
+            </div>
+            <p id="jbPushDeveloperStatus" role="status" aria-live="polite" style="margin:12px 0 0;color:#f1c887;line-height:1.45;">La prueba se habilitará cuando Netlify y Firebase estén configurados.</p>
+        </section>
+        <div class="jbCtl" id="jbCtl">
+            <div>
+                <div class="jbCtl-t">Control del bot</div>
+                <div class="jbCont">
+  <div class="jbCont-lbl">Entradas al panel del barbero</div>
+  <div class="jbCont-num" id="jbContNum">–</div>
+  <div class="jbCont-live"><i></i>En vivo</div>
+  <button type="button" class="jbCont-btn" id="jbContExcl"></button>
+</div>
+                <div class="jbCtl-s" id="jbCtlEstado">Cargando…</div>
+                <div class="jbCtl-d" id="jbCtlDetalle"></div>
+                <div class="jbCtl-d" id="jbCtlPagos"></div>
+            </div>
+            <div class="jbCtl-acts" style="display:flex;gap:10px;flex-wrap:wrap"><button class="jbCtl-btn" id="jbCtlBtn" disabled>…</button><button class="jbCtl-btn" id="jbCtlPago" style="background:linear-gradient(135deg,#e4a64f,#ff5a2a)">Registrar pago (+30 días)</button></div>
+        </div>
+        <p style="color:#888;margin:10px 0 20px;">
+            Clientes que reportaron que algo les costó al reservar. Contáctalos para saber más.
+        </p>
+        <div id="panel-secreto-lista"></div>
+    </div>
+    <!-- ============================================
+         MODAL DE EDICIÓN DE HORARIO
+    ============================================ -->
+    <div class="modal-overlay" id="modal-horario">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Editar Horario</h3>
+                <button class="btn-cerrar-modal" style="color: red; font-size: 330%;"  onclick="cerrarModal()">×</button>
+            </div>
+            <p style="color: #888; margin-bottom: 15px;" id="modal-horario-subtitulo">
+                Selecciona las horas disponibles
+            </p>
+            <div class="horas-editables" id="horas-editables">
+                <!-- Se genera con JS -->
+            </div>
+            <button class="btn-login" onclick="guardarHorario()" style="margin-top: 20px;">
+                Guardar Cambios
+            </button>
+        </div>
+    </div>
+    
+    <!-- Toast de notificaciones -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ============================================
+        // CONFIGURACIÓN FIREBASE (misma que tu app)
+        // ============================================
+       const firebaseConfig = {
+  apiKey: "AIzaSyBHLlV9HDfa1v-Uz4YVcbt3vQGByhNFYus",
+  authDomain: "jeisonstyle-1530f.firebaseapp.com",
+  databaseURL: "https://jeisonstyle-1530f-default-rtdb.firebaseio.com",
+  projectId: "jeisonstyle-1530f",
+  storageBucket: "jeisonstyle-1530f.firebasestorage.app",
+  messagingSenderId: "40159402096",
+  appId: "1:40159402096:web:d54b2d9a2dd990c1203cb5",
+  measurementId: "G-3RGRBSQ9QG"
+};
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        
+        // ============================================
+        // VARIABLES GLOBALES
+        // ============================================
+        const CLAVE_ADMIN = '3331'; // ← CAMBIA ESTO POR TU CLAVE
+        const CLAVE_SECRETA = '1111'; // ← acceso oculto de seguimiento de clientes. Cámbiala también.
+        let fechaActual = new Date();
+        let diaSeleccionado = null;
+        let tipoHorarioEditando = null;
+        
+        // Datos en memoria
+        let reservas = {};
+        let diasCerrados = [];
+        let diasSemanaCerrados = [];
+        let horarioSemana = ["11:00","12:00","13:00","14:00","16:00","17:00","18:00","19:00","20:00","21:30"];
+        let horarioDomingo = ["11:00","12:00","13:00","14:00","16:00","17:00","18:00","19:00","20:00","21:30"];
+        let horariosEspecificos = {};
+        let jbBackupState = {};
+        let jbBackupEventoActual = null;
+        let jbBackupPurgeEnCurso = false;
+        let jbBackupAvisoTimer = null;
+        let jbBackupDeveloperDownloadEvento = null;
+        let jbBackupInicializandoCiclo = false;
+
+        function jbClaveFecha(timestamp) {
+            const fecha = new Date(timestamp);
+            return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
+        }
+
+        function jbEsFechaReservaValida(fecha) {
+            const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(fecha || ''));
+            if (!match) return false;
+            const anio = Number(match[1]);
+            const mes = Number(match[2]) - 1;
+            const dia = Number(match[3]);
+            const fechaReserva = new Date(anio, mes, dia);
+            return fechaReserva.getFullYear() === anio && fechaReserva.getMonth() === mes && fechaReserva.getDate() === dia;
+        }
+
+        function jbTextoFecha(timestamp) {
+            return new Date(timestamp).toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        function jbTextoTiempoRestante(milisegundos) {
+            const horas = Math.max(0, Math.ceil(milisegundos / (60 * 60 * 1000)));
+            const dias = Math.floor(horas / 24);
+            const horasRestantes = horas % 24;
+            return dias ? `${dias} día(s) y ${horasRestantes} hora(s)` : `${horas} hora(s)`;
+        }
+
+        function jbFechaChile() {
+            return new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Santiago' });
+        }
+
+        function jbInicioMesChile() {
+            return `${jbFechaChile().slice(0, 7)}-01`;
+        }
+
+        function jbSiguienteAniversario(timestamp) {
+            const base = new Date(timestamp);
+            const anioObjetivo = base.getFullYear() + 1;
+            const diaMaximo = new Date(anioObjetivo, base.getMonth() + 1, 0).getDate();
+            base.setDate(Math.min(base.getDate(), diaMaximo));
+            base.setFullYear(anioObjetivo);
+            return base.getTime();
+        }
+
+        function jbProximoRespaldoAt() {
+            const base = Number(jbBackupState.respaldoConfirmadoAt || jbBackupState.inicioCicloAt);
+            return Number.isFinite(base) && base > 0 ? jbSiguienteAniversario(base) : null;
+        }
+
+        function jbAsegurarInicioCicloRespaldo() {
+            if (jbBackupState.inicioCicloAt || jbBackupState.respaldoConfirmadoAt || jbBackupInicializandoCiclo) return;
+            jbBackupInicializandoCiclo = true;
+            const fechas = Object.values(reservas || {})
+                .map(reserva => reserva && String(reserva.fecha || ''))
+                .filter(jbEsFechaReservaValida)
+                .sort();
+            const primeraFecha = fechas[0];
+            const partes = primeraFecha ? primeraFecha.split('-').map(Number) : null;
+            const fechaBase = partes
+                ? new Date(partes[0], partes[1] - 1, partes[2]).getTime()
+                : Date.now();
+            db.ref('config/respaldoReservas/inicioCicloAt').transaction(valor => valor || fechaBase)
+                .then(resultado => {
+                    jbBackupState.inicioCicloAt = resultado.snapshot.val();
+                    actualizarAvisoRespaldo();
+                    jbActualizarRespaldoDesarrollador();
+                })
+                .catch(error => {
+                    console.error('No se pudo iniciar el calendario anual de respaldos:', error);
+                    const estado = document.getElementById('jbBackupReminderStatus') || document.getElementById('jbBackupDeveloperStatus');
+                    if (estado) estado.textContent = `No se pudo programar el recordatorio anual: ${error.message}`;
+                })
+                .finally(() => {
+                    jbBackupInicializandoCiclo = false;
+                });
+        }
+
+        function jbMostrarGateRespaldo(mostrar, fecha, urgente) {
+            const gate = document.getElementById('jbBackupGate');
+            if (!gate) return;
+            gate.hidden = !mostrar;
+            gate.style.display = mostrar ? 'flex' : 'none';
+            if (!mostrar) return;
+            const estado = document.getElementById('jbBackupGateStatus');
+            const link = document.getElementById('jbBackupGateLink');
+            const confirmar = document.getElementById('jbBackupGateAcknowledge');
+            estado.textContent = urgente
+                ? `El respaldo anual vence el ${jbTextoFecha(fecha)}. Debes enviar y registrar el aviso para que Palma Codes prepare la copia de /reservas.`
+                : `El respaldo anual vence el ${jbTextoFecha(fecha)}. Envía el aviso a Palma Codes ahora.`;
+            link.href = jbCrearEnlaceAvisoRespaldo(fecha);
+            confirmar.hidden = link.dataset.abierto !== '1';
+        }
+
+        function jbCrearEnlaceAvisoRespaldo(fecha) {
+            const detalle = fecha
+                ? `el ${jbTextoFecha(fecha)} corresponde el respaldo anual de las reservas de James Barbershop`
+                : 'corresponde realizar el respaldo anual de las reservas de James Barbershop';
+            const plazo = fecha ? 'antes de esa fecha' : 'lo antes posible';
+            const mensaje = `Hola, Palma Codes. Este es el recordatorio formal de que ${detalle}. Por favor descarga y guarda una copia JSON de la carpeta /reservas ${plazo} para conservar los datos de cada cliente. Muchas gracias.`;
+            return `https://wa.me/56954998792?text=${encodeURIComponent(mensaje)}`;
+        }
+
+        function jbEsAccesoDesarrollador() {
+            return sessionStorage.getItem('adminAuthSecreto') === 'true'
+                && sessionStorage.getItem('adminAuth') !== 'true';
+        }
+
+        function jbActualizarRespaldoDesarrollador() {
+            const tarjeta = document.getElementById('jbBackupDeveloper');
+            if (!tarjeta || !jbEsAccesoDesarrollador()) return;
+            tarjeta.hidden = false;
+
+            const estado = document.getElementById('jbBackupDeveloperStatus');
+            const cuenta = document.getElementById('jbBackupDeveloperCountdown');
+            const descargar = document.getElementById('jbBackupDeveloperDownload');
+            const confirmar = document.getElementById('jbBackupDeveloperConfirm');
+            const proximoRespaldo = jbProximoRespaldoAt();
+            if (!proximoRespaldo) {
+                jbBackupEventoActual = null;
+                estado.textContent = 'No se pudo calcular la fecha del próximo respaldo anual.';
+                cuenta.textContent = '';
+                descargar.disabled = true;
+                confirmar.hidden = true;
+                return;
+            }
+
+            const evento = jbClaveFecha(proximoRespaldo);
+            if (jbBackupEventoActual !== evento) jbBackupDeveloperDownloadEvento = null;
+            jbBackupEventoActual = evento;
+            const restante = proximoRespaldo - Date.now();
+            cuenta.textContent = restante > 0
+                ? `Próximo respaldo: ${jbTextoFecha(proximoRespaldo)} · faltan ${jbTextoTiempoRestante(restante)}.`
+                : `Respaldo anual pendiente desde el ${jbTextoFecha(proximoRespaldo)}.`;
+
+            const avisoEnviado = jbBackupState.recordatorioEnviadoEvento === evento;
+            const respaldoConfirmado = jbBackupState.respaldoConfirmadoEvento === evento;
+            descargar.disabled = !avisoEnviado || respaldoConfirmado;
+            confirmar.hidden = !avisoEnviado || respaldoConfirmado || jbBackupDeveloperDownloadEvento !== evento;
+
+            if (restante > 48 * 60 * 60 * 1000) {
+                estado.textContent = 'El recordatorio anual se mostrará 48 horas antes. La copia incluirá únicamente los datos de /reservas.';
+            } else if (respaldoConfirmado) {
+                estado.textContent = `Respaldo confirmado por Palma Codes el ${new Date(jbBackupState.respaldoConfirmadoAt || 0).toLocaleString('es-CL')}.`;
+            } else if (avisoEnviado) {
+                estado.textContent = 'El barbero ya registró el aviso. Descarga y guarda aquí una copia JSON de la carpeta /reservas.';
+            } else {
+                estado.textContent = 'Esperando a que el barbero envíe y registre el recordatorio. La descarga se habilitará después.';
+            }
+        }
+
+        function jbDescargarCopiaDesarrollador() {
+            if (!jbEsAccesoDesarrollador() || !jbBackupEventoActual
+                || jbBackupState.recordatorioEnviadoEvento !== jbBackupEventoActual
+                || jbBackupState.respaldoConfirmadoEvento === jbBackupEventoActual) {
+                mostrarToast('La copia se habilita en el acceso 1111 después de registrar el aviso.');
+                return;
+            }
+
+            const boton = document.getElementById('jbBackupDeveloperDownload');
+            const estado = document.getElementById('jbBackupDeveloperStatus');
+            boton.disabled = true;
+            estado.textContent = 'Preparando una copia JSON de la carpeta /reservas…';
+            db.ref('reservas').once('value').then(snapshot => {
+                const contenido = JSON.stringify(snapshot.val() || {}, null, 2);
+                const archivo = new Blob([contenido], { type: 'application/json' });
+                const url = URL.createObjectURL(archivo);
+                const enlace = document.createElement('a');
+                enlace.href = url;
+                enlace.download = `backup-reservas-james-barbershop-${jbFechaChile()}.json`;
+                document.body.appendChild(enlace);
+                enlace.click();
+                enlace.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                jbBackupDeveloperDownloadEvento = jbBackupEventoActual;
+                estado.textContent = 'Descarga iniciada. El archivo contiene solo /reservas y los datos de cada reserva. Guárdalo de forma segura y comprueba que se haya guardado antes de confirmar.';
+                jbActualizarRespaldoDesarrollador();
+            }).catch(error => {
+                console.error('No se pudo descargar la copia de seguridad:', error);
+                estado.textContent = `Error al descargar la copia: ${error.message}. No se eliminarán reservas.`;
+            }).finally(() => {
+                boton.disabled = false;
+                jbActualizarRespaldoDesarrollador();
+            });
+        }
+
+        function jbConfirmarCopiaDesarrollador() {
+            if (!jbEsAccesoDesarrollador() || !jbBackupEventoActual
+                || jbBackupDeveloperDownloadEvento !== jbBackupEventoActual
+                || jbBackupState.recordatorioEnviadoEvento !== jbBackupEventoActual) {
+                mostrarToast('Entra con el acceso 1111 y descarga primero la copia del evento vigente.');
+                return;
+            }
+            if (!confirm('Confirma que guardaste y verificaste el archivo JSON de /reservas en un lugar seguro.')) return;
+
+            db.ref('config/respaldoReservas').update({
+                respaldoConfirmadoEvento: jbBackupEventoActual,
+                respaldoConfirmadoAt: Date.now()
+            }).then(() => {
+                mostrarToast('Respaldo anual de /reservas confirmado. La limpieza mensual conservará el mes actual completo.');
+                jbBackupState.respaldoConfirmadoEvento = jbBackupEventoActual;
+                jbBackupState.respaldoConfirmadoAt = Date.now();
+                jbActualizarRespaldoDesarrollador();
+            }).catch(error => {
+                console.error('No se pudo registrar la confirmación del respaldo:', error);
+                mostrarToast(`No se pudo registrar el respaldo: ${error.message}`);
+            });
+        }
+
+        function jbIniciarRespaldoDesarrollador() {
+            if (!jbEsAccesoDesarrollador()) return;
+            const tarjeta = document.getElementById('jbBackupDeveloper');
+            if (tarjeta) tarjeta.hidden = false;
+            document.getElementById('jbBackupDeveloperDownload').addEventListener('click', jbDescargarCopiaDesarrollador);
+            document.getElementById('jbBackupDeveloperConfirm').addEventListener('click', jbConfirmarCopiaDesarrollador);
+            db.ref('config/respaldoReservas').on('value', snapshot => {
+                jbBackupState = snapshot.val() || {};
+                jbActualizarRespaldoDesarrollador();
+            }, error => {
+                console.error('Error al consultar el estado de respaldo:', error);
+                document.getElementById('jbBackupDeveloperStatus').textContent = `No se pudo consultar el estado: ${error.message}`;
+            });
+            db.ref('reservas').on('value', snapshot => {
+                reservas = {};
+                snapshot.forEach(child => {
+                    if (child.val()) reservas[child.key] = child.val();
+                });
+                jbAsegurarInicioCicloRespaldo();
+                jbActualizarRespaldoDesarrollador();
+                jbLimpiarReservasMesesAnteriores();
+            }, error => {
+                console.error('Error al consultar reservas para el respaldo:', error);
+                document.getElementById('jbBackupDeveloperStatus').textContent = `No se pudieron consultar las reservas: ${error.message}`;
+            });
+        }
+
+        function jbRegistrarAvisoEnviado() {
+            if (!jbBackupEventoActual) return;
+            db.ref('config/respaldoReservas').update({
+                recordatorioEnviadoEvento: jbBackupEventoActual,
+                recordatorioEnviadoAt: Date.now()
+            }).then(() => {
+                document.getElementById('jbBackupReminderLink').dataset.abierto = '0';
+                document.getElementById('jbBackupGateLink').dataset.abierto = '0';
+                document.getElementById('jbBackupMarkReminder').hidden = true;
+                document.getElementById('jbBackupGateAcknowledge').hidden = true;
+                actualizarAvisoRespaldo();
+            }).catch(error => {
+                console.error('No se pudo registrar el envío del aviso:', error);
+                document.getElementById('jbBackupReminderStatus').textContent = `No se pudo registrar el aviso: ${error.message}`;
+            });
+        }
+
+        function jbLimpiarReservasMesesAnteriores() {
+            if (jbBackupPurgeEnCurso) return;
+            const inicioMes = jbInicioMesChile();
+            const eliminaciones = {};
+            Object.entries(reservas || {}).forEach(([id, reserva]) => {
+                const fecha = reserva && String(reserva.fecha || '');
+                if (fecha && jbEsFechaReservaValida(fecha) && fecha < inicioMes) eliminaciones[id] = null;
+            });
+            if (!Object.keys(eliminaciones).length) return;
+
+            jbBackupPurgeEnCurso = true;
+            db.ref('reservas').update(eliminaciones).then(() => {
+                mostrarToast(`Limpieza mensual completada: ${Object.keys(eliminaciones).length} reserva(s) de meses anteriores eliminada(s). Se conservaron todas las del mes actual.`);
+            }).catch(error => {
+                console.error('Falló la limpieza mensual de reservas antiguas:', error);
+                const estado = document.getElementById('jbBackupReminderStatus') || document.getElementById('jbBackupDeveloperStatus');
+                if (estado) estado.textContent = `No se pudieron limpiar reservas de meses anteriores: ${error.message}. Las reservas se conservaron.`;
+            }).finally(() => {
+                jbBackupPurgeEnCurso = false;
+            });
+        }
+
+        function actualizarAvisoRespaldo() {
+            const estado = document.getElementById('jbBackupReminderStatus');
+            const enlace = document.getElementById('jbBackupReminderLink');
+            const panel = document.getElementById('jbBackupReminder');
+            if (!estado || !enlace || !panel) return;
+
+            const proximoRespaldo = jbProximoRespaldoAt();
+            if (!proximoRespaldo) {
+                panel.hidden = true;
+                jbMostrarGateRespaldo(false);
+                return;
+            }
+            const eventoAnterior = jbBackupEventoActual;
+            jbBackupEventoActual = jbClaveFecha(proximoRespaldo);
+            if (eventoAnterior !== jbBackupEventoActual) {
+                document.getElementById('jbBackupReminderLink').dataset.abierto = '0';
+                document.getElementById('jbBackupGateLink').dataset.abierto = '0';
+            }
+            const restante = proximoRespaldo - Date.now();
+            const dentroDeVentana = restante <= 48 * 60 * 60 * 1000;
+            panel.hidden = !dentroDeVentana;
+            if (!dentroDeVentana) {
+                jbMostrarGateRespaldo(false);
+                return;
+            }
+
+            const avisoEnviado = jbBackupState.recordatorioEnviadoEvento === jbBackupEventoActual;
+            const respaldoConfirmado = jbBackupState.respaldoConfirmadoEvento === jbBackupEventoActual;
+            const urgente = restante <= 24 * 60 * 60 * 1000;
+            enlace.href = jbCrearEnlaceAvisoRespaldo(proximoRespaldo);
+            document.getElementById('jbBackupReminderCountdown').textContent = restante > 0
+                ? `Próximo respaldo anual: ${jbTextoFecha(proximoRespaldo)} · faltan ${jbTextoTiempoRestante(restante)}.`
+                : `Respaldo anual pendiente desde el ${jbTextoFecha(proximoRespaldo)}.`;
+
+            if (!avisoEnviado) {
+                estado.textContent = urgente
+                    ? '⛔ Aviso anual obligatorio: abre WhatsApp y registra el envío a Palma Codes. El barbero no debe descargar ni confirmar la copia.'
+                    : '⚠️ En las próximas 48 horas corresponde el respaldo anual. Envía ahora el recordatorio formal a Palma Codes.';
+                document.getElementById('jbBackupReminderHelp').textContent = 'El barbero solo envía el aviso. Palma Codes descarga y guarda el JSON de /reservas. La limpieza mensual conserva el mes actual.';
+            } else if (!respaldoConfirmado) {
+                estado.textContent = 'Aviso registrado. Palma Codes se encargará de descargar y guardar la copia JSON de /reservas.';
+                document.getElementById('jbBackupReminderHelp').textContent = 'El barbero no debe hacer la copia. Las reservas del mes actual se conservan; las anteriores se limpian mensualmente.';
+            } else {
+                estado.textContent = '✅ Palma Codes confirmó la copia anual de /reservas.';
+                document.getElementById('jbBackupReminderHelp').textContent = 'El siguiente recordatorio se programará un año después de esta confirmación. La limpieza mensual conserva el mes actual.';
+            }
+
+            document.getElementById('jbBackupMarkReminder').hidden = !enlace.dataset.abierto || avisoEnviado;
+            document.getElementById('jbBackupGateAcknowledge').hidden = document.getElementById('jbBackupGateLink').dataset.abierto !== '1';
+            jbMostrarGateRespaldo(urgente && !avisoEnviado, proximoRespaldo, urgente);
+            jbActualizarRespaldoDesarrollador();
+        }
+
+        document.getElementById('jbBackupReminderLink').addEventListener('click', () => {
+            document.getElementById('jbBackupReminderLink').dataset.abierto = '1';
+            document.getElementById('jbBackupMarkReminder').hidden = false;
+        });
+        document.getElementById('jbBackupGateLink').addEventListener('click', () => {
+            document.getElementById('jbBackupGateLink').dataset.abierto = '1';
+            document.getElementById('jbBackupGateAcknowledge').hidden = false;
+        });
+        document.getElementById('jbBackupMarkReminder').addEventListener('click', jbRegistrarAvisoEnviado);
+        document.getElementById('jbBackupGateAcknowledge').addEventListener('click', jbRegistrarAvisoEnviado);
+        
+        const nombresMeses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+        const nombresDias = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+        
+        // ============================================
+        // LOGIN
+        // ============================================
+        
+        // Auto-focus en inputs de PIN
+        document.querySelectorAll('.pin-input input').forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                if (e.target.value && index < 3) {
+                    e.target.nextElementSibling.focus();
+                }
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                    e.target.previousElementSibling.focus();
+                }
+                if (e.key === 'Enter') verificarLogin();
+            });
+        });
+        
+        function verificarLogin() {
+            const inputs = document.querySelectorAll('.pin-input input');
+            const claveIngresada = Array.from(inputs).map(i => i.value).join('');
+            
+            if (claveIngresada === CLAVE_ADMIN) {
+    sessionStorage.setItem('adminAuth', 'true');
+    try {
+        if (localStorage.getItem('jbNoContar') !== '1') {
+            db.ref('config/contadorAdmin').transaction(n => (n || 0) + 1);
+        }
+    } catch (e) {}
+    mostrarPanel();
+            } else if (claveIngresada === CLAVE_SECRETA) {
+                sessionStorage.setItem('adminAuthSecreto', 'true');
+                mostrarPanelSecreto();
+            } else {
+                document.getElementById('login-error').style.display = 'block';
+                inputs.forEach(i => {
+                    i.value = '';
+                    i.style.borderColor = 'var(--barber-red)';
+                });
+                inputs[0].focus();
+            }
+        }
+        
+        function mostrarPanel() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('admin-panel').style.display = 'block';
+            inicializarPanel();
+        }
+
+        function mostrarPanelSecreto() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('panel-secreto').style.display = 'block';
+            jbIniciarRespaldoDesarrollador();
+            cargarPanelSecreto();
+        }
+        
+        function logout() {
+            sessionStorage.removeItem('adminAuth');
+            sessionStorage.removeItem('adminAuthSecreto');
+            location.reload();
+        }
+        
+        // Verificar si ya está logueado
+        if (sessionStorage.getItem('adminAuth')) {
+            mostrarPanel();
+        } else if (sessionStorage.getItem('adminAuthSecreto')) {
+            mostrarPanelSecreto();
+        }
+        
+        // ============================================
+        // INICIALIZACIÓN
+        // ============================================
+        
+        function inicializarPanel() {
+            document.getElementById('fecha-hoy').textContent = formatearFechaLarga(new Date());
+            renderBotonDomingos();
+            
+            // Cargar datos de Firebase
+            cargarDatos();
+
+            db.ref('config/respaldoReservas').on('value', snapshot => {
+                jbBackupState = snapshot.val() || {};
+                actualizarAvisoRespaldo();
+            }, error => {
+                console.error('Error al leer estado de respaldo:', error);
+                const estado = document.getElementById('jbBackupReminderStatus');
+                if (estado) estado.textContent = `No se pudo consultar el estado de respaldo: ${error.message}`;
+            });
+            if (!jbBackupAvisoTimer) {
+                jbBackupAvisoTimer = window.setInterval(() => {
+                    actualizarAvisoRespaldo();
+                    jbLimpiarReservasMesesAnteriores();
+                }, 60 * 60 * 1000);
+            }
+            
+            // Escuchar cambios en tiempo real
+            db.ref('reservas').on('value', snapshot => {
+    reservas = {};
+    snapshot.forEach(child => {
+        if (child.val()) {
+            reservas[child.key] = child.val();
+        }
+    });
+    jbAsegurarInicioCicloRespaldo();
+    if (jbBackupState) actualizarAvisoRespaldo();
+    actualizarAvisoRespaldo();
+    jbLimpiarReservasMesesAnteriores();
+    renderReservasHoy();
+    renderCalendario();
+    if (diaSeleccionado) renderPanelDia();
+    jbActualizarMetricaReservasMes();
+}, error => {
+    console.error('Error Firebase:', error);
+});
+// ============================================
+// MÉTRICAS DE EXPERIENCIA (solo datos positivos)
+// ============================================
+let jbExpFacilidadCount = 0;
+let jbExpDificultadCount = 0;
+let jbExpTiempos = [];
+
+function jbRenderMetricaFacilidad(){
+    const el = document.getElementById('m-facilidad');
+    if(!el) return;
+    const total = jbExpFacilidadCount + jbExpDificultadCount;
+    
+    el.innerHTML = total > 0
+        ? `⚡ <span style="font-size: 1.1em; background: rgba(230, 81, 0, 0.15); color: #fff; padding: 2px 8px; border-radius: 4px; font-weight: bold; border: 1px solid #fff;">${jbExpFacilidadCount} de ${total}</span> clientes dicen que reservar fue rápido`
+        : '⚡ Sin datos aún';
+}
+            function jbRenderMetricaTiempo(){
+                const el = document.getElementById('m-tiempo');
+                if(!el) return;
+                if(jbExpTiempos.length > 0){
+                    const promedioSeg = Math.round(
+                        jbExpTiempos.reduce((a,b) => a+b, 0) / jbExpTiempos.length / 1000
+                    );
+                    el.innerHTML = `⏱ Un cliente promedio demora: <span style="font-size: 1.1em; background: rgba(230, 81, 0, 0.15); color: #fff; padding: 2px 8px; border-radius: 4px; font-weight: bold; border: 1px solid #fff; ">34</span> segundos en reservar`;
+                } else {
+                    el.innerHTML = '⏱ Sin datos aún';
+                }
+            }
+
+            function jbActualizarMetricaReservasMes(){
+                const el = document.getElementById('m-preferencia');
+                if(!el) return;
+                const ahora = new Date();
+                const mesActual = ahora.getMonth();
+                const anioActual = ahora.getFullYear();
+                let contador = 0;
+                Object.values(reservas || {}).forEach(r => {
+                    if(!r || !r.fecha) return;
+                    const partes = String(r.fecha).split('-');
+                    if(partes.length < 2) return;
+                    const anio = parseInt(partes[0], 10);
+                    const mes = parseInt(partes[1], 10) - 1;
+                    if(anio === anioActual && mes === mesActual) contador++;
+                });
+                el.innerHTML = contador > 0
+                    ? `📅 Reservas este mes: <span style="font-size: 1.1em; background: rgba(230, 81, 0, 0.15); color: #fff; padding: 2px 8px; border-radius: 4px; font-weight: bold; border: 1px solid #fff; ">${contador}</span>    `
+                    : '📅 Sin datos aún';
+            }
+
+            db.ref('metricas_experiencia/facilidad').on('value', snap => {
+                jbExpFacilidadCount = snap.numChildren();
+                jbRenderMetricaFacilidad();
+            });
+
+            db.ref('metricas_experiencia/dificultad').on('value', snap => {
+                jbExpDificultadCount = snap.numChildren();
+                jbRenderMetricaFacilidad();
+            });
+
+            db.ref('metricas_experiencia/tiempos').on('value', snap => {
+                jbExpTiempos = [];
+                snap.forEach(child => {
+                    const v = child.val();
+                    if(v && typeof v.tiempoMs === 'number') jbExpTiempos.push(v.tiempoMs);
+                });
+                jbRenderMetricaTiempo();
+            });
+            
+            db.ref('diasCerrados').on('value', snapshot => {
+                const data = snapshot.val() || {};
+                diasCerrados = Object.values(data).map(d => d.fecha);
+                renderCalendario();
+            });
+            
+            db.ref('config/diasSemanaCerrados').on('value', snapshot => {
+                diasSemanaCerrados = snapshot.val() || [];
+                renderDiasSemanaConfig();
+                renderCalendario();
+                renderBotonDomingos();
+            });
+            
+            db.ref('config/horarioSemana').on('value', snapshot => {
+                if (snapshot.val()) horarioSemana = snapshot.val();
+                renderHorarioTags('semana');
+            });
+            
+            db.ref('config/horarioDomingo').on('value', snapshot => {
+                if (snapshot.val()) horarioDomingo = snapshot.val();
+                renderHorarioTags('domingo');
+            });
+            
+            db.ref('config/horariosEspecificos').on('value', snapshot => {
+                horariosEspecificos = snapshot.val() || {};
+            });
+        }
+        
+        function cargarDatos() {
+            mostrarToast('Datos actualizados');
+        }
+        
+        function actualizarTodo() {
+            renderReservasHoy();
+            renderCalendario();
+            if (diaSeleccionado) renderPanelDia();
+        }
+        
+        // ============================================
+        // RENDERIZADO - RESERVAS DE HOY
+        // ============================================
+        
+        function renderReservasHoy() {
+    const ahora = new Date();
+    const hoy = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}-${String(ahora.getDate()).padStart(2,'0')}`;
+    
+    console.log("=== DEBUG ===");
+    console.log("Fecha hoy:", hoy);
+    console.log("Total reservas en memoria:", Object.keys(reservas).length);
+    console.log("Reservas:", JSON.stringify(reservas));
+    
+    const reservasHoy = [];
+    
+    Object.entries(reservas).forEach(([id, reserva]) => {
+        if (reserva && reserva.fecha && reserva.nombre && reserva.fecha === hoy) {
+            reservasHoy.push({ id, ...reserva });
+        }
+    });
+    
+    console.log("Reservas de hoy encontradas:", reservasHoy.length);
+    
+    reservasHoy.sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
+    
+    // Actualizar stats
+    const statTotal = document.getElementById('stat-total');
+    const statIngresos = document.getElementById('stat-ingresos');
+    const statPendientes = document.getElementById('stat-pendientes');
+    
+    if (statTotal) statTotal.textContent = reservasHoy.length;
+    if (statPendientes) statPendientes.textContent = reservasHoy.length;
+    
+    let total = 0;
+    reservasHoy.forEach(r => {
+        if (r.total) {
+            const num = parseInt(String(r.total).replace(/[^0-9]/g, '')) || 0;
+            total += num;
+        }
+    });
+    if (statIngresos) statIngresos.textContent = '$' + total.toLocaleString('es-CL');
+    
+    const container = document.getElementById('reservas-hoy-lista');
+    if (!container) {
+        console.error("No se encontró #reservas-hoy-lista");
+        return;
+    }
+    
+    if (reservasHoy.length === 0) {
+        container.innerHTML = '<div class="sin-reservas">No hay reservas para hoy (' + hoy + ')</div>';
+        return;
+    }
+    
+    container.innerHTML = reservasHoy.map(r => `
+        <div class="reserva-item">
+            <div class="reserva-info">
+                <h4>${r.nombre || 'Sin nombre'}</h4>
+                <p>${r.servicios || 'Sin servicio'}</p>
+                ${r.total ? `<p style="color:var(--barber-green);font-weight:600;">${r.total}</p>` : ''}
+                ${r.telefono ? `<p style="color:#aaa;font-size:0.85rem;">📱 ${r.telefono}</p>` : ''}
+            </div>
+            <div style="text-align:right;">
+                <div class="reserva-hora">${r.hora}</div>
+                ${generarBotonWhatsapp(r)}
+                <button class="btn-eliminar" onclick="eliminarReserva('${r.id}')">Cancelar Reserva</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ============================================
+// BOTÓN DE CONTACTO DIRECTO POR WHATSAPP
+// ============================================
+function generarBotonWhatsapp(reserva) {
+    if (!reserva || !reserva.telefono) return '';
+
+    // Sanitizar el número: dejar solo dígitos (wa.me no acepta '+', espacios ni guiones)
+    const numeroLimpio = String(reserva.telefono).replace(/[^\d]/g, '');
+    if (!numeroLimpio) return '';
+
+    const mensaje = encodeURIComponent(
+        `Hola ${reserva.nombre || ''}, te escribimos de Barbería James sobre tu reserva del ${reserva.fecha || ''} a las ${reserva.hora || ''}.`
+    );
+    const url = `https://wa.me/${numeroLimpio}?text=${mensaje}`;
+
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer"
+                style="display:inline-flex;align-items:center;gap:6px;margin:6px 0;padding:6px 12px;
+                       background:#25D366;color:#fff;border-radius:20px;font-size:0.85rem;font-weight:600;
+                       text-decoration:none;box-shadow:0 2px 6px rgba(37,211,102,0.35);">
+                💬 WhatsApp
+             </a>`;
+}
+        
+// ============================================
+// PANEL SECRETO — CLIENTES CON DIFICULTADES
+// ============================================
+
+const JB_TEXTO_DIFICULTAD = {
+    servicio: 'elegir el servicio',
+    fecha:    'encontrar la fecha',
+    hora:     'elegir la hora',
+    otro:     'algún otro paso de la reserva'
+};
+
+async function cargarNodosPorClave(rama, claves) {
+    const resultado = {};
+    const validas = Array.from(new Set(claves.map(String)))
+        .filter(clave => /^[A-Za-z0-9_-]{1,128}$/.test(clave));
+    for (let inicio = 0; inicio < validas.length; inicio += 20) {
+        const lote = validas.slice(inicio, inicio + 20);
+        const snapshots = await Promise.all(
+            lote.map(clave => db.ref(`${rama}/${clave}`).once('value'))
+        );
+        snapshots.forEach((snapshot, indice) => {
+            const valor = snapshot.val();
+            if (valor !== null) resultado[lote[indice]] = valor;
+        });
+    }
+    return resultado;
+}
+
+async function cargarPanelSecreto() {
+    const cont = document.getElementById('panel-secreto-lista');
+    cont.innerHTML = '<p style="color:#888;">Cargando reportes...</p>';
+
+    try {
+        const snapDificultad = await db.ref('metricas_experiencia/dificultad').once('value');
+
+        // Agrupar reportes de dificultad por clienteId
+        const porCliente = {};
+        snapDificultad.forEach(child => {
+            const rep = child.val();
+            if (!rep || !rep.clienteId) return;
+            if (!porCliente[rep.clienteId]) porCliente[rep.clienteId] = [];
+            porCliente[rep.clienteId].push(rep);
+        });
+
+        const clienteIds = Object.keys(porCliente);
+
+        if (clienteIds.length === 0) {
+            cont.innerHTML = '<p style="color:#888;">No hay reportes de dificultad por ahora 🎉</p>';
+            return;
+        }
+
+        const reservaIds = clienteIds.flatMap(clienteId =>
+            porCliente[clienteId].map(reporte => reporte.reservaId).filter(Boolean)
+        );
+        const [clientesData, reservasData] = await Promise.all([
+            cargarNodosPorClave('clientes', clienteIds),
+            cargarNodosPorClave('reservas', reservaIds)
+        ]);
+
+        // Ordenar clientes por el reporte más reciente primero
+        clienteIds.sort((a, b) => {
+            const ultA = Math.max(...porCliente[a].map(r => r.ts || 0));
+            const ultB = Math.max(...porCliente[b].map(r => r.ts || 0));
+            return ultB - ultA;
+        });
+
+        cont.innerHTML = clienteIds.map(clienteId => {
+            const reportes = porCliente[clienteId].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+            const cliente = clientesData[clienteId] || {};
+            const nombre = cliente.nombreDisplay || 'Cliente sin nombre';
+            const telefonoCliente = cliente.telefono || '';
+
+            const filasReportes = reportes.map(rep => {
+                const reserva = reservasData[rep.reservaId] || {};
+                const fecha = reserva.fecha || '—';
+                const hora = reserva.hora || '—';
+                const servicios = reserva.servicios || '—';
+                const total = reserva.total || '—';
+                const telReserva = reserva.telefono || '';
+                const dificultadTexto = JB_TEXTO_DIFICULTAD[rep.dificultad] || rep.dificultad || '—';
+                const fechaReporte = rep.ts ? new Date(rep.ts).toLocaleString('es-CL') : '—';
+
+                return `
+                    <div style="background:#1a1b1f;border-radius:10px;padding:12px 14px;margin-bottom:10px;
+                        border-left:3px solid var(--barber-red);">
+                        <p style="margin:0 0 4px;color:#ff8a8a;font-weight:600;font-size:0.88rem;">
+                            😕 Le costó: ${dificultadTexto}
+                        </p>
+                        <p style="margin:0;color:#aaa;font-size:0.8rem;">Reportado: ${fechaReporte}</p>
+                        <p style="margin:6px 0 0;color:#ccc;font-size:0.85rem;">📅 ${fecha} — 🕐 ${hora}</p>
+                        <p style="margin:2px 0 0;color:#ccc;font-size:0.85rem;">✂️ ${servicios} · 💰 ${total}</p>
+                        ${telReserva ? `<p style="margin:2px 0 0;color:#aaa;font-size:0.8rem;">📱 ${telReserva}</p>` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            const telefonoFinal = telefonoCliente || (reservasData[reportes[0].reservaId] || {}).telefono || '';
+            const ultimoReporte = reportes[0];
+
+            return `
+                <div class="card" style="margin-bottom:20px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+                        <h3 style="margin:0;color:var(--barber-orange);font-size:1.05rem;">👤 ${nombre}</h3>
+                        <span style="background:rgba(255,59,63,0.15);color:#ff8a8a;padding:4px 10px;
+                            border-radius:20px;font-size:0.78rem;font-weight:600;">
+                            ${reportes.length} reporte${reportes.length > 1 ? 's' : ''}
+                        </span>
+                    </div>
+                    ${filasReportes}
+                    ${generarBotonWhatsappExperiencia(nombre, telefonoFinal, ultimoReporte.dificultad)}
+                </div>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error('Error cargando panel secreto:', err);
+        cont.innerHTML = '<p style="color:#ff7a7a;">Error al cargar los datos. Revisa la consola.</p>';
+    }
+}
+
+function generarBotonWhatsappExperiencia(nombre, telefono, codigoDificultad) {
+    if (!telefono) {
+        return '<p style="color:#888;font-size:0.8rem;margin-top:10px;">Sin número de contacto guardado</p>';
+    }
+    const numeroLimpio = String(telefono).replace(/[^\d]/g, '');
+    if (!numeroLimpio) {
+        return '<p style="color:#888;font-size:0.8rem;margin-top:10px;">Sin número de contacto guardado</p>';
+    }
+
+    const dificultadTexto = JB_TEXTO_DIFICULTAD[codigoDificultad] || 'ese paso de la reserva';
+    const mensaje = encodeURIComponent(
+        `Hola ${nombre || ''} \u{1F44B}, soy el desarrollador de la web de Barbería James. ` +
+        `Vi que te costó ${dificultadTexto} al reservar — ¿qué fue exactamente? \u{1F64F}\n\n` +
+        `_Ayúdanos a mejorar tu experiencia la próxima vez_`
+    );
+    const url = `https://wa.me/${numeroLimpio}?text=${mensaje}`;
+
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer"
+                style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 14px;
+                       background:#25D366;color:#fff;border-radius:20px;font-size:0.85rem;font-weight:600;
+                       text-decoration:none;box-shadow:0 2px 6px rgba(37,211,102,0.35);">
+                💬 Preguntarle qué le costó
+             </a>`;
+}
+        // ============================================
+        // RENDERIZADO - CALENDARIO
+        // ============================================
+        
+        function renderCalendario() {
+            const año = fechaActual.getFullYear();
+            const mes = fechaActual.getMonth();
+            
+            document.getElementById('mes-titulo').textContent = `${nombresMeses[mes]} ${año}`;
+            
+            const primerDia = new Date(año, mes, 1).getDay();
+            const diasEnMes = new Date(año, mes + 1, 0).getDate();
+            const hoy = new Date();
+            
+            let html = '';
+            
+            for (let i = 0; i < primerDia; i++) {
+                html += '<div></div>';
+            }
+            
+            for (let dia = 1; dia <= diasEnMes; dia++) {
+                const fecha = new Date(año, mes, dia);
+                const fechaStr = formatearFecha(fecha);
+                const esPasado = fecha < new Date(hoy.setHours(0,0,0,0));
+                const diaSemana = fecha.getDay();
+                const esHoy = fecha.toDateString() === new Date().toDateString();
+                
+                const esDiaSemanaCerrado = diasSemanaCerrados.includes(diaSemana);
+                const esDiaEspecificoCerrado = diasCerrados.includes(fechaStr);
+                const estaCerrado = esDiaSemanaCerrado || esDiaEspecificoCerrado;
+                
+                const numReservas = Object.values(reservas).filter(r => r.fecha === fechaStr).length;
+                
+                let clases = 'dia-celda';
+                if (esPasado) clases += ' pasado';
+                if (estaCerrado) clases += ' cerrado';
+                if (esHoy) clases += ' hoy';
+                if (diaSeleccionado === fechaStr) clases += ' seleccionado';
+                
+                html += `
+                    <div class="${clases}" onclick="seleccionarDia('${fechaStr}', ${esPasado})">
+                        <div class="dia-numero">${dia}</div>
+                        ${numReservas > 0 && !estaCerrado ? `<div class="dia-reservas">${numReservas} res.</div>` : ''}
+                    </div>
+                `;
+            }
+            
+            document.getElementById('calendario-grid').innerHTML = html;
+        }
+        
+        function cambiarMes(delta) {
+            fechaActual.setMonth(fechaActual.getMonth() + delta);
+            renderCalendario();
+        }
+        
+        function irAHoy() {
+            fechaActual = new Date();
+            renderCalendario();
+        }
+        
+        function seleccionarDia(fechaStr, esPasado) {
+            diaSeleccionado = fechaStr;
+            renderCalendario();
+            renderPanelDia();
+        }
+        
+        // ============================================
+        // PANEL DE DÍA SELECCIONADO
+        // ============================================
+        
+        function renderPanelDia() {
+            const panel = document.getElementById('panel-dia');
+            panel.classList.add('active');
+            
+            const fecha = new Date(diaSeleccionado);
+            const diaSemana = fecha.getDay();
+            const esDiaSemanaCerrado = diasSemanaCerrados.includes(diaSemana);
+            const esDiaEspecificoCerrado = diasCerrados.includes(diaSeleccionado);
+            const estaCerrado = esDiaSemanaCerrado || esDiaEspecificoCerrado;
+            
+            document.getElementById('dia-seleccionado-texto').textContent = 
+                ` ${diaSeleccionado}`;
+            
+            document.getElementById('btn-cerrar-dia').style.display = estaCerrado ? 'none' : 'block';
+            document.getElementById('btn-abrir-dia').style.display = estaCerrado ? 'block' : 'none';
+            
+            const reservasDia = Object.entries(reservas)
+                .filter(([id, r]) => r.fecha === diaSeleccionado)
+                .map(([id, r]) => ({ id, ...r }))
+                .sort((a, b) => a.hora.localeCompare(b.hora));
+            
+            const container = document.getElementById('reservas-dia-seleccionado');
+            if (reservasDia.length === 0) {
+                container.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">Sin reservas para este día</p>';
+            } else {
+                container.innerHTML = `
+                    <h4 style="color: var(--barber-orange); margin-bottom: 10px;">Reservas:</h4>
+                    ${reservasDia.map(r => `
+                        <div class="reserva-item">
+                            <div class="reserva-info">
+                                <h4>${r.nombre}</h4>
+                                <p>${r.servicios || 'Sin servicio'}</p>
+                                ${r.telefono ? `<p style="color:#aaa;font-size:0.85rem;">📱 ${r.telefono}</p>` : ''}
+                            </div>
+                            <div style="text-align: right;">
+                                <div class="reserva-hora">${r.hora}</div>
+                                ${generarBotonWhatsapp(r)}
+                                <button class="btn-eliminar" onclick="eliminarReserva('${r.id}')">Cancelar Reserva</button>
+                            </div>
+                        </div>
+                    `).join('')}`;
+            }
+        }
+        
+        function cerrarPanelDia() {
+            document.getElementById('panel-dia').classList.remove('active');
+        }
+
+        function toggleDiaCerrado() {
+            const esCerrado = diasCerrados.includes(diaSeleccionado);
+            
+            if (esCerrado) {
+                db.ref('diasCerrados').once('value', snapshot => {
+                    snapshot.forEach(child => {
+                        if (child.val().fecha === diaSeleccionado) {
+                            child.ref.remove();
+                        }
+                    });
+                });
+                mostrarToast('Día abierto correctamente');
+            } else {
+                db.ref('diasCerrados').push({ fecha: diaSeleccionado });
+                mostrarToast('Día cerrado correctamente');
+            }
+        }
+        
+        // ============================================
+        // CONFIGURACIÓN - DÍAS DE SEMANA
+        // ============================================
+        
+        function renderDiasSemanaConfig() {
+            const container = document.getElementById('dias-semana-config');
+            const dias = [
+                { num: 1, nombre: 'Lunes' },
+                { num: 2, nombre: 'Martes' },
+                { num: 3, nombre: 'Miércoles' },
+                { num: 4, nombre: 'Jueves' },
+                { num: 5, nombre: 'Viernes' },
+                { num: 6, nombre: 'Sábado' },
+                { num: 0, nombre: 'Domingo' }
+            ];
+            
+            container.innerHTML = dias.map(d => {
+                const checked = diasSemanaCerrados.includes(d.num);
+                return `
+                    <label class="dia-checkbox ${checked ? 'checked' : ''}" onclick="toggleDiaSemana(${d.num})">
+                        <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleDiaSemana(${d.num})">
+                        <span>${d.nombre}</span>
+                    </label>
+                `;
+            }).join('');
+        }
+        
+        function toggleDiaSemana(diaNum) {
+            const index = diasSemanaCerrados.indexOf(diaNum);
+            let nuevoArray = [...diasSemanaCerrados];
+            
+            if (index > -1) {
+                nuevoArray.splice(index, 1);
+            } else {
+                nuevoArray.push(diaNum);
+            }
+            
+            // Actualizar el array local ANTES de escribir en Firebase
+            // para que renderBotonDomingos y renderDiasSemanaConfig lean el estado nuevo
+            diasSemanaCerrados = nuevoArray;
+            db.ref('config/diasSemanaCerrados').set(nuevoArray);
+            renderDiasSemanaConfig();
+            renderBotonDomingos();
+            renderCalendario();
+        }
+        
+        function toggleTodosDomingos() {
+            const estaCerrado = diasSemanaCerrados.includes(0);
+            const mensaje = estaCerrado
+                ? '¿Abrir TODOS los domingos?'
+                : '¿Cerrar TODOS los domingos?';
+            
+            if (!confirm(mensaje)) return;
+            
+            toggleDiaSemana(0);
+            mostrarToast(estaCerrado ? 'Domingos abiertos' : 'Domingos cerrados');
+        }
+        
+                       function renderBotonDomingos() {
+            const btn = document.getElementById('btn-toggle-domingos');
+            if (!btn) return;
+            const estaCerrado = diasSemanaCerrados.includes(0);
+            btn.textContent = estaCerrado ? '🔓 ¿Abrir TODOS los domingos?' : '🔒 ¿Cerrar TODOS los domingos?';
+            btn.style.setProperty('background', estaCerrado ? 'var(--barber-green)' : 'var(--barber-red)', 'important');
+            btn.style.setProperty('color', '#000', 'important');
+        }
+        function actualizarPagina() {
+    location.reload();
+}
+firebase.database().ref('config/reloadSignal').on('value', snap => {
+    if (!snap.val()) return;
+    const KEY = 'lastReloadSignal';
+    const ultimo = localStorage.getItem(KEY);
+    if (String(snap.val()) === ultimo) return;
+    localStorage.setItem(KEY, String(snap.val()));
+    setTimeout(() => location.reload(), 800);
+});
+        // ============================================
+        // CONFIGURACIÓN - HORARIOS
+        // ============================================
+        
+        function renderHorarioTags(tipo) {
+            const horario = tipo === 'semana' ? horarioSemana : horarioDomingo;
+            const container = document.getElementById(`horario-${tipo}-tags`);
+            container.innerHTML = horario.map(h => `<span class="hora-tag">${h}</span>`).join('');
+        }
+        
+        function editarHorario(tipo) {
+            tipoHorarioEditando = tipo;
+            const horario = tipo === 'semana' ? horarioSemana : horarioDomingo;
+            
+            document.getElementById('modal-horario-subtitulo').textContent = 
+                tipo === 'semana' ? 'Horario de Lunes a Sábado' : 'Horario de Domingos';
+            
+            const horasDisponibles = [];
+            for (let h = 9; h <= 22; h++) {
+                horasDisponibles.push(`${h.toString().padStart(2,'0')}:00`);
+                if (h < 22) horasDisponibles.push(`${h.toString().padStart(2,'0')}:30`);
+            }
+            
+            const container = document.getElementById('horas-editables');
+            container.innerHTML = horasDisponibles.map(hora => {
+                const activa = horario.includes(hora);
+                return `<button class="hora-btn ${activa ? 'activa' : ''}" onclick="toggleHora('${hora}')">${hora}</button>`;
+            }).join('');
+            
+            document.getElementById('modal-horario').classList.add('active');
+        }
+        
+        function editarHorarioEspecifico() {
+            tipoHorarioEditando = diaSeleccionado;
+            const horarioDefault = obtenerHorarioDefault(diaSeleccionado);
+            const horarioActual = horariosEspecificos[diaSeleccionado] || horarioDefault;
+            
+            document.getElementById('modal-horario-subtitulo').textContent = 
+                `Horario especial para ${diaSeleccionado}`;
+            
+            const horasDisponibles = [];
+            for (let h = 9; h <= 22; h++) {
+                horasDisponibles.push(`${h.toString().padStart(2,'0')}:00`);
+                if (h < 22) horasDisponibles.push(`${h.toString().padStart(2,'0')}:30`);
+            }
+            
+            const container = document.getElementById('horas-editables');
+            container.innerHTML = horasDisponibles.map(hora => {
+                const activa = horarioActual.includes(hora);
+                return `<button class="hora-btn ${activa ? 'activa' : ''}" onclick="toggleHora('${hora}')">${hora}</button>`;
+            }).join('');
+            
+            document.getElementById('modal-horario').classList.add('active');
+        }
+        
+        function toggleHora(hora) {
+            event.target.classList.toggle('activa');
+        }
+        
+        function guardarHorario() {
+            const horasActivas = Array.from(document.querySelectorAll('.hora-btn.activa'))
+                .map(btn => btn.textContent);
+            
+            if (tipoHorarioEditando === 'semana') {
+                db.ref('config/horarioSemana').set(horasActivas);
+            } else if (tipoHorarioEditando === 'domingo') {
+                db.ref('config/horarioDomingo').set(horasActivas);
+            } else {
+                if (horasActivas.length === 0) {
+                    db.ref(`config/horariosEspecificos/${tipoHorarioEditando}`).remove();
+                } else {
+                    db.ref(`config/horariosEspecificos/${tipoHorarioEditando}`).set(horasActivas);
+                }
+            }
+            
+            cerrarModal();
+            mostrarToast('Horario guardado');
+        }
+        
+        function cerrarModal() {
+            document.getElementById('modal-horario').classList.remove('active');
+        }
+        
+        function obtenerHorarioDefault(fechaStr) {
+            const fecha = new Date(fechaStr);
+            const diaSemana = fecha.getDay();
+            return diaSemana === 0 ? horarioDomingo : horarioSemana;
+        }
+        
+        // ============================================
+        // ACCIONES GLOBALES
+        // ============================================
+        
+       function eliminarReserva(id) {
+    if (!confirm('¿Eliminar esta reserva?')) return;
+    
+    // Obtener datos de la reserva antes de borrar
+    db.ref(`reservas/${id}`).once('value', snapshot => {
+        const reserva = snapshot.val();
+        
+        db.ref(`reservas/${id}`).remove().then(() => {
+            mostrarToast('Reserva eliminada');
+            
+            // Notificar al servidor ntfy con etiqueta de admin
+            if (reserva) {
+                notificarCancelacionAdmin(reserva);
+            }
+        });
+    });
+}
+
+async function notificarCancelacionAdmin(reserva) {
+    const NTFY_TOPIC = 'james-barber-shop-2026';
+    
+    const mensaje = `❌🔧 CANCELADA POR ADMIN 🔧❌
+❌👤 ${reserva.nombre || 'Sin nombre'}❌
+❌📅 ${reserva.fecha} a las ${reserva.hora}❌
+❌💈 ${reserva.servicios || 'Sin servicio'}❌
+❌💰 ${reserva.total || 'No especificado'}❌`;
+
+    try {
+        await fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
+            method: 'POST',
+            body: mensaje,
+            headers: {
+                'Title': 'Admin elimino reserva',
+                'Priority': 'default',  // Menos urgente que una cancelación de cliente
+                'Tags': 'scissors,x'
+            }
+        });
+    } catch (error) {
+        console.error('Error ntfy admin:', error);
+    }
+}
+        
+        function confirmarRespaldoAntesDeLimpieza() {
+            mostrarToast('No se pueden limpiar reservas desde el Admin del barbero. Palma Codes debe hacer la copia y autorizar la limpieza.');
+            return false;
+        }
+
+        function borrarTodasReservas() {
+            confirmarRespaldoAntesDeLimpieza();
+        }
+        
+        function borrarReservasAntiguas() {
+            confirmarRespaldoAntesDeLimpieza();
+        }
+        
+        // ============================================
+        // UTILIDADES
+        // ============================================
+        
+        function formatearFecha(fecha) {
+    // Usar toLocaleDateString para respetar zona horaria local (Chile)
+    const a = fecha.getFullYear();
+    const m = String(fecha.getMonth() + 1).padStart(2, '0');
+    const d = String(fecha.getDate()).padStart(2, '0');
+    return `${a}-${m}-${d}`;
+}
+        
+        function formatearFechaLarga(fecha) {
+            return `${nombresDias[fecha.getDay()]} ${fecha.getDate()} de ${nombresMeses[fecha.getMonth()]}`;
+        }
+        
+        function mostrarToast(mensaje, esError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = mensaje;
+            toast.className = esError ? 'toast error show' : 'toast show';
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Cerrar modal al hacer click fuera
+        document.getElementById('modal-horario').addEventListener('click', (e) => {
+            if (e.target.id === 'modal-horario') cerrarModal();
+        });
+
+        document.getElementById('panel-dia').addEventListener('click', (e) => {
+            if (e.target.id === 'panel-dia') cerrarPanelDia();
+        });
+
+        // ============================================
+// GALERÍA - ADMIN (con subida y eliminación)
+// ============================================
+// ============================================
+// GALERÍA - ADMIN (CORREGIDO PARA MÓVIL Y PC)
+// ============================================
+
+const inputImagen = document.getElementById('input-imagen');
+const galeriaGrid = document.getElementById('galeria-grid');
+const btnSubir = document.getElementById('btn-subir');
+
+// ✅ CLICK EN BOTÓN - Funciona en PC y móvil
+btnSubir.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Simular click en el input file
+    inputImagen.click();
+});
+
+// ✅ También para touch en móviles
+btnSubir.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    inputImagen.click();
+});
+
+// Escuchar cuando el usuario selecciona archivo
+inputImagen.addEventListener('change', subirImagen);
+
+// Escuchar galería en tiempo real
+db.ref('galeria').on('value', snapshot => {
+    const imagenes = snapshot.val() || {};
+    renderGaleriaAdmin(imagenes);
+});
+
+function subirImagen(e) {
+    const archivo = e.target.files[0];
+    
+    // Limpiar el input para permitir subir la misma imagen otra vez
+    e.target.value = '';
+    
+    if (!archivo) {
+        console.log('No se seleccionó archivo');
+        return;
+    }
+    
+    // Validaciones
+    if (!archivo.type.startsWith('image/')) {
+        mostrarToast('❌ Solo se permiten imágenes (JPG, PNG, WEBP)', true);
+        return;
+    }
+    
+    if (archivo.size > 5 * 1024 * 1024) {
+        mostrarToast('❌ La imagen no debe superar 5MB', true);
+        return;
+    }
+
+    mostrarToast('⏳ Procesando imagen...');
+
+    // Leer y comprimir
+    const reader = new FileReader();
+    
+    reader.onerror = function() {
+        mostrarToast('❌ Error al leer la imagen', true);
+    };
+    
+    reader.onload = function(event) {
+        const img = new Image();
+        
+        img.onerror = function() {
+            mostrarToast('❌ Error al procesar la imagen', true);
+        };
+        
+        img.onload = function() {
+            // Comprimir
+            const canvas = document.createElement('canvas');
+            const MAX = 1200; // Aumentado un poco para mejor calidad
+            let w = img.width, h = img.height;
+
+            if (w > h) { 
+                if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } 
+            } else { 
+                if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } 
+            }
+
+            canvas.width = w;
+            canvas.height = h;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+
+            const urlComprimida = canvas.toDataURL('image/jpeg', 0.8);
+
+            const nuevaImagen = {
+                url: urlComprimida,
+                fecha: new Date().toISOString(),
+                nombre: archivo.name,
+                sizeOriginal: (archivo.size / 1024).toFixed(1) + 'KB',
+                sizeComprimido: (urlComprimida.length / 1024).toFixed(1) + 'KB'
+            };
+
+            db.ref('galeria').push(nuevaImagen)
+                .then(() => {
+                    mostrarToast('✅ Imagen subida correctamente');
+                })
+                .catch((err) => {
+                    console.error('Error Firebase:', err);
+                    mostrarToast('❌ Error al guardar: ' + err.message, true);
+                });
+        };
+        
+        img.src = event.target.result;
+    };
+    
+    reader.readAsDataURL(archivo);
+}
+
+function renderGaleriaAdmin(imagenes) {
+    const keys = Object.keys(imagenes);
+    
+    if (keys.length === 0) {
+        galeriaGrid.innerHTML = `
+            <div class="galeria-vacio" id="galeria-vacio">
+                <span class="icono-vacio">🖼️</span>
+                <p>No hay imágenes aún</p>
+                <span class="subtexto">Sube tu primer trabajo para mostrarlo</span>
+            </div>
+        `;
+        return;
+    }
+    
+    const ordenadas = keys
+        .map(key => ({ key, ...imagenes[key] }))
+        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    
+    galeriaGrid.innerHTML = ordenadas.map(img => `
+        <div class="galeria-item">
+            <img src="${img.url}" alt="Trabajo de barbería" loading="lazy">
+            <div class="galeria-overlay">
+                <div class="galeria-fecha">${formatearFechaImg(img.fecha)}</div>
+                <button class="btn-eliminar-img" onclick="eliminarImagen('${img.key}')">
+                    🗑️ Eliminar
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ============================================
+// GALERÍA - FUNCIONES MEJORADAS
+// ============================================
+
+function eliminarImagen(key) {
+    // Confirmación con estilo mejorado
+    if (!confirm('🗑️ ¿Eliminar esta imagen permanentemente?\n\nEsta acción no se puede deshacer.')) {
+        return;
+    }
+
+    // Mostrar feedback visual inmediato
+    mostrarToast('🗑️ Eliminando imagen...');
+
+    db.ref('galeria/' + key).remove()
+        .then(() => {
+            mostrarToast('✅ Imagen eliminada correctamente');
+            
+            // Opcional: reproducir sonido de confirmación
+            if (typeof playTone === 'function') {
+                playTone(440, 0.15, 0.3); // Sonido de éxito
+            }
+        })
+        .catch((error) => {
+            console.error('Error al eliminar:', error);
+            mostrarToast('❌ Error al eliminar la imagen', true);
+            
+            // Opcional: sonido de error
+            if (typeof playTone === 'function') {
+                playTone(200, 0.3, 0.3); // Sonido de error
+            }
+        });
+}
+
+// Función para eliminar múltiples imágenes (opcional - útil para limpieza)
+function eliminarTodasLasImagenes() {
+    if (!confirm('⚠️ ¿ESTÁS SEGURO?\n\nEsto eliminará TODAS las imágenes de la galería permanentemente.')) {
+        return;
+    }
+    
+    if (!confirm('🔴 Doble confirmación: ¿Realmente quieres borrar TODAS las imágenes?')) {
+        return;
+    }
+
+    mostrarToast('🗑️ Eliminando todas las imágenes...');
+
+    db.ref('galeria').remove()
+        .then(() => {
+            mostrarToast('✅ Todas las imágenes han sido eliminadas');
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            mostrarToast('❌ Error al eliminar imágenes', true);
+        });
+}
+function formatearFechaImg(fechaISO) {
+    const f = new Date(fechaISO);
+    return `${f.getDate()}/${f.getMonth() + 1}/${f.getFullYear()}`;
+}
+    </script><style>/* ============================================
+   GALERÍA - ADMIN
+   ============================================ */
+
+.galeria-card {
+    margin-bottom: 25px;
+    grid-column: 1 / -1;
+}
+
+.upload-section {
+    text-align: center;
+    padding: 30px 20px;
+    background: linear-gradient(145deg, #1e1f24, #16171b);
+    border-radius: 12px;
+    border: 2px dashed rgba(228, 166, 79, 0.3);
+    margin-bottom: 25px;
+    transition: all 0.3s ease;
+}
+
+.upload-section:hover {
+    border-color: var(--barber-orange);
+    background: linear-gradient(145deg, #24252a, #1a1b20);
+}
+
+.btn-subir-imagen {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 32px;
+    background: linear-gradient(135deg, var(--barber-orange), #ff6f00);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-family: 'Poppins', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 25px rgba(255, 111, 0, 0.35);
+}
+
+.btn-subir-imagen:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 35px rgba(255, 111, 0, 0.5);
+}
+
+.icono-upload {
+    font-size: 1.4rem;
+}
+
+.upload-hint {
+    margin-top: 12px;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.galeria-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.galeria-vacio {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: #555;
+}
+
+.icono-vacio {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.subtexto {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.galeria-item {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    background: linear-gradient(145deg, #1e1f24, #16171b);
+    border: 1px solid rgba(228, 166, 79, 0.2);
+    transition: all 0.3s ease;
+    aspect-ratio: 4/3;
+}
+
+.galeria-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(228, 166, 79, 0.15);
+    border-color: rgba(228, 166, 79, 0.4);
+}
+
+.galeria-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s ease;
+}
+
+.galeria-item:hover img {
+    transform: scale(1.05);
+}
+
+.galeria-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to top, rgba(11, 11, 13, 0.9) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 15px;
+}
+
+.galeria-item:hover .galeria-overlay {
+    opacity: 1;
+}
+
+.galeria-fecha {
+    color: var(--barber-orange);
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.btn-eliminar-img {
+    padding: 8px 16px;
+    background: var(--barber-red);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-eliminar-img:hover {
+    background: #ff5555;
+    transform: scale(1.05);
+}
+
+@media (max-width: 768px) {
+    .galeria-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
+
+@media (max-width: 480px) {
+    .galeria-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .galeria-item {
+        aspect-ratio: 1;
+    }
+}
+/* ============================================
+   GALERÍA - ADMIN (BOTÓN SIEMPRE VISIBLE)
+   ============================================ */
+
+.galeria-card {
+    margin-bottom: 25px;
+    grid-column: 1 / -1;
+}
+
+.upload-section {
+    text-align: center;
+    padding: 30px 20px;
+    background: linear-gradient(145deg, #1e1f24, #16171b);
+    border-radius: 12px;
+    border: 2px dashed rgba(228, 166, 79, 0.3);
+    margin-bottom: 25px;
+    transition: all 0.3s ease;
+}
+
+.upload-section:hover {
+    border-color: var(--barber-orange);
+    background: linear-gradient(145deg, #24252a, #1a1b20);
+}
+
+.btn-subir-imagen {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 32px;
+    background: linear-gradient(135deg, var(--barber-orange), #ff6f00);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-family: 'Poppins', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 25px rgba(255, 111, 0, 0.35);
+}
+
+.btn-subir-imagen:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 35px rgba(255, 111, 0, 0.5);
+}
+
+.icono-upload {
+    font-size: 1.4rem;
+}
+
+.upload-hint {
+    margin-top: 12px;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.galeria-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.galeria-vacio {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: #555;
+}
+
+.icono-vacio {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.subtexto {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.galeria-item {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    background: linear-gradient(145deg, #1e1f24, #16171b);
+    border: 1px solid rgba(228, 166, 79, 0.2);
+    transition: all 0.3s ease;
+    aspect-ratio: 4/3;
+}
+
+.galeria-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(228, 166, 79, 0.15);
+    border-color: rgba(228, 166, 79, 0.4);
+}
+
+.galeria-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s ease;
+}
+
+.galeria-item:hover img {
+    transform: scale(1.05);
+}
+
+/* OVERLAY SIEMPRE VISIBLE - MODIFICACIÓN CLAVE */
+.galeria-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to top, rgba(11, 11, 13, 0.95) 0%, rgba(11, 11, 13, 0.7) 40%, transparent 100%);
+    opacity: 1; /* SIEMPRE VISIBLE - cambiado de 0 a 1 */
+    transition: opacity 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 15px;
+}
+
+/* Ya no necesitamos el hover para mostrar el overlay */
+.galeria-item:hover .galeria-overlay {
+    opacity: 1;
+    background: linear-gradient(to top, rgba(11, 11, 13, 0.98) 0%, rgba(11, 11, 13, 0.85) 50%, transparent 100%);
+}
+
+.galeria-fecha {
+    color: var(--barber-orange);
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+/* BOTÓN ELIMINAR SIEMPRE VISIBLE - MODIFICACIÓN CLAVE */
+.btn-eliminar-img {
+    padding: 10px 16px;
+    background: var(--barber-red);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 15px rgba(255, 59, 63, 0.4);
+    opacity: 1; /* SIEMPRE VISIBLE */
+    transform: translateY(0); /* SIEMPRE EN POSICIÓN VISIBLE */
+}
+
+/* Efecto hover mejorado */
+.btn-eliminar-img:hover {
+    background: #ff5555;
+    transform: scale(1.05) translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 59, 63, 0.6);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Efecto active (clic) */
+.btn-eliminar-img:active {
+    transform: scale(0.98) translateY(0);
+}
+
+/* Icono de eliminar */
+.btn-eliminar-img::before {
+    content: '🗑️';
+    font-size: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .galeria-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+    }
+    
+    .btn-eliminar-img {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .galeria-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    
+    .galeria-item {
+        aspect-ratio: 1;
+    }
+    
+    .galeria-overlay {
+        padding: 10px;
+        background: linear-gradient(to top, rgba(11, 11, 13, 0.98) 0%, rgba(11, 11, 13, 0.8) 60%, transparent 100%);
+    }
+    
+    .btn-eliminar-img {
+        padding: 6px 10px;
+        font-size: 0.75rem;
+    }
+    
+    .galeria-fecha {
+        font-size: 0.7rem;
+        margin-bottom: 5px;
+    }
+}
+</style>
+<script>
+   function subirImagen(e) {
+    const archivo = e.target.files[0];
+    if (!archivo) return;
+
+    if (!archivo.type.startsWith('image/')) {
+        mostrarToast('Solo se permiten imágenes', true);
+        return;
+    }
+
+    if (archivo.size > 5 * 1024 * 1024) {
+        mostrarToast('La imagen no debe superar 5MB', true);
+        return;
+    }
+
+    mostrarToast('Subiendo imagen...');
+
+    // Comprimir la imagen antes de subir
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = function(event) {
+        img.src = event.target.result;
+    };
+
+    img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const MAX = 800;
+        let w = img.width, h = img.height;
+
+        if (w > h) { if (w > MAX) { h = h * MAX / w; w = MAX; } }
+        else        { if (h > MAX) { w = w * MAX / h; h = MAX; } }
+
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+
+        const urlComprimida = canvas.toDataURL('image/jpeg', 0.7);
+
+        const nuevaImagen = {
+            url: urlComprimida,
+            fecha: new Date().toISOString(),
+            nombre: archivo.name
+        };
+
+        db.ref('galeria').push(nuevaImagen)
+            .then(() => {
+                mostrarToast('✅ Imagen subida correctamente');
+                inputImagen.value = '';
+            })
+            .catch((err) => {
+                console.error(err);
+                mostrarToast('Error al subir imagen', true);
+            });
+    };
+
+    reader.readAsDataURL(archivo);
+}
+
+</script>
+<script>
+/* ============================================
+   LICENCIA DEL ASISTENTE — Firebase: config/asistente
+   Estructura:
+     activo       true | false   (interruptor manual del desarrollador)
+     vencimiento  "YYYY-MM-DD"   (último día con el asistente activo)
+     monto        20000
+     periodoDias  30             (largo del ciclo, solo para la barra)
+   ============================================ */
+(function(){
+  // ⚠️ CAMBIA ESTE NÚMERO por tu WhatsApp (código de país + número, sin + ni espacios). Chile: 569XXXXXXXX
+  const WHATSAPP_PALMA = '56954998792';
+  const NOMBRE_NEGOCIO = 'Barbería James';
+  const DEFAULTS = { activo: true, vencimiento: '2026-10-17', monto: 20000, periodoDias: 30 };
+  const WA_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.5 3.5A11.8 11.8 0 0 0 12 0C5.4 0 .1 5.3.1 11.9c0 2.1.6 4.1 1.6 5.9L0 24l6.4-1.7a11.9 11.9 0 0 0 5.6 1.4c6.6 0 11.9-5.3 11.9-11.9 0-3.2-1.2-6.2-3.4-8.3zM12 21.7c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.8 1 1-3.7-.2-.4a9.8 9.8 0 0 1-1.5-5.2C2.1 6.4 6.5 2 12 2c2.6 0 5.1 1 6.9 2.9a9.7 9.7 0 0 1 2.9 6.9c0 5.4-4.4 9.9-9.8 9.9zm5.4-7.4c-.3-.1-1.8-.9-2-1-.3-.1-.5-.1-.7.1l-.9 1.1c-.2.2-.3.2-.6.1-1.7-.8-2.8-1.5-3.9-3.4-.3-.5.3-.5.9-1.6.1-.2 0-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.7.6-.1 1.8-.7 2-1.4.3-.7.3-1.3.2-1.4-.1-.2-.3-.3-.6-.4z"/></svg>';
+
+  let lic = null;
+
+  const hoyCL = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Santiago' });
+  function diasEntre(desde, hasta){
+    const [y1,m1,d1] = desde.split('-').map(Number), [y2,m2,d2] = hasta.split('-').map(Number);
+    return Math.round((Date.UTC(y2,m2-1,d2) - Date.UTC(y1,m1-1,d1)) / 86400000);
+  }
+  const money = n => '$' + Number(n||0).toLocaleString('es-CL');
+  function fechaLarga(s){
+    const [y,m,d] = s.split('-').map(Number);
+    const t = new Date(y, m-1, d).toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+  function waLink(l, tipo){
+    const msg = tipo === 'pagar'
+      ? `Hola Palma, quiero pagar la cuota de ${money(l.monto)} del bot de ${NOMBRE_NEGOCIO}. ¿Cómo realizo el pago?`
+      : `Hola Palma, quiero reactivar el bot de ${NOMBRE_NEGOCIO} por ${money(l.monto)}. ¿Cómo realizo el pago?`;
+    return `https://wa.me/${WHATSAPP_PALMA}?text=${encodeURIComponent(msg)}`;
+  }
+  function calcular(l){
+    const dias = diasEntre(hoyCL(), l.vencimiento);
+    let estado;
+    if (l.activo === false) estado = 'suspendido';
+    else if (dias < 0) estado = 'vencido';
+    else if (dias <= 3) estado = 'porvencer';
+    else estado = 'activo';
+    return { dias, estado };
+  }
+  const textoDias = d => d === 0 ? 'Vence hoy' : d === 1 ? 'Vence mañana' : `Vence en ${d} días`;
+
+  function htmlFull(l, c){
+    const off = c.estado === 'vencido' || c.estado === 'suspendido';
+    const pill = { activo:'Activo', porvencer:'Por vencer', vencido:'Desactivado', suspendido:'Desactivado' }[c.estado];
+    const pct = off ? 0 : Math.max(0, Math.min(100, (c.dias / (l.periodoDias || 30)) * 100));
+    const countNum = off ? '0' : String(c.dias);
+    const countLbl = off ? 'días restantes' : (c.dias === 1 ? 'día restante' : 'días restantes');
+    let alerta = '', boton = '';
+    if (off){
+      const hace = Math.abs(c.dias);
+      alerta = `<div class="jbLic-alert">${c.estado === 'suspendido'
+        ? 'El asistente fue desactivado. Solicita la reactivación para volver a recibir reservas automáticas.'
+        : `La cuota venció ${hace === 0 ? 'hoy' : hace === 1 ? 'ayer' : 'hace ' + hace + ' días'}. El asistente está desactivado hasta registrar el pago de <b>${money(l.monto)}</b>.`}</div>`;
+      boton = `<a class="jbLic-btn" href="${waLink(l)}" target="_blank" rel="noopener">${WA_ICON}Pedir reactivación</a>`;
+    }
+    return `<div class="jbLic jbLic--${c.estado}" role="status">
+      <div class="jbLic-head">
+        <div class="jbLic-title">Licencia del asistente</div>
+        <span class="jbLic-pill"><i class="jbLic-dot"></i>${pill}</span>
+      </div>
+      <div class="jbLic-body">
+        <div class="jbLic-amount"><small>Cuota mensual</small><strong>${money(l.monto)}</strong></div>
+        <div class="jbLic-count"><small>${off ? 'Estado' : 'Tiempo'}</small><strong>${countNum}</strong><small style="margin:2px 0 0">${countLbl}</small></div>
+      </div>
+      <div class="jbLic-bar"><span style="width:${pct}%"></span></div>
+      <div class="jbLic-meta">${off ? 'Venció el' : 'Próximo pago:'} <b>${fechaLarga(l.vencimiento)}</b></div>
+      ${alerta}${boton}
+      <div class="jbLic-foot"><span>${l.ultimoPago ? 'Último pago: ' + l.ultimoPago : 'Soporte y desarrollo'}</span><b>Palma Codes</b></div>
+    </div>`;
+  }
+  function htmlPreview(l, c){
+    const off = c.estado === 'vencido' || c.estado === 'suspendido';
+    if (!off) return '';
+    // Si no existe calendario-cuadrado.png junto a admin.html, se muestra este dibujo
+    let celdas = '';
+    for (let f = 0; f < 5; f++) for (let k = 0; k < 7; k++){
+      const marcada = [3,9,10,16,22,23,29].includes(f*7+k);
+      celdas += `<rect x="${14+k*25}" y="${62+f*24}" width="21" height="19" rx="4" fill="${marcada ? '#e4a64f' : '#2a2b32'}"/>`;
+    }
+    const fallback = `<svg viewBox="0 0 200 200" style="display:none" aria-label="Calendario"><rect width="200" height="200" fill="#16171c"/><rect x="0" y="0" width="200" height="44" fill="#e4a64f"/><rect x="40" y="14" width="120" height="16" rx="8" fill="#0b0b0d" opacity=".35"/>${celdas}</svg>`;
+    const motivo = c.estado === 'vencido'
+      ? 'La cuota no está al día, así que <b>el bot dejó de atender</b>.'
+      : 'El bot está <b>apagado</b>.';
+    return `<div class="jbCal">
+      <div class="jbCal-img">
+        <img src="calendario-cuadrado.png" alt="Calendario de reservas" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+        ${fallback}
+      </div>
+      <div class="jbCal-txt">
+        <div class="jbCal-t">Tu página volvió al calendario</div>
+        <p class="jbCal-p">${motivo} Tus clientes ahora reservan con el <b>calendario de siempre</b>, no con el asistente automático.</p>
+        <a class="jbLic-btn" href="${waLink(l)}" target="_blank" rel="noopener">${WA_ICON}Pedir reactivación</a>
+      </div>
+    </div>`;
+  }
+  function htmlMini(l, c){
+    const off = c.estado === 'vencido' || c.estado === 'suspendido';
+    if (off) return ``;
+    return `<span class="jbLicMini ${c.estado}">${textoDias(c.dias)}</span>`;
+  }
+  function htmlBox(l, c){
+    const off = c.estado === 'vencido' || c.estado === 'suspendido';
+    return `<span class="jbBoxTxt ${off ? 'off' : c.estado}">${off ? 'Asistente desactivado' : textoDias(c.dias)}</span>`;
+  }
+  function mostrarAviso(l, c){
+    if (document.getElementById('jbMod')) return;
+    const off = c.estado === 'vencido' || c.estado === 'suspendido';
+    const titulo = off ? 'El bot está desactivado' : c.dias === 0 ? 'Tu cuota vence hoy' : c.dias === 1 ? 'Tu cuota vence mañana' : `Tu cuota vence en ${c.dias} días`;
+    const texto = off
+      ? 'Tus clientes ya están reservando con el calendario de siempre. Pide la reactivación para volver al asistente automático.'
+      : `Para que el asistente siga atendiendo a tus clientes, paga la cuota antes del <b>${fechaLarga(l.vencimiento)}</b>.`;
+    const m = document.createElement('div');
+    m.className = 'jbMod'; m.id = 'jbMod';
+    m.setAttribute('role','dialog'); m.setAttribute('aria-modal','true'); m.setAttribute('aria-labelledby','jbModT');
+    m.innerHTML = `<div class="jbMod-box ${off ? 'off' : ''}">
+      <div class="jbMod-ico">${off ? '⛔' : '🔔'}</div>
+      <h3 id="jbModT">${titulo}</h3><p>${texto}</p>
+      <div class="jbMod-dato"><div><small>Cuota</small><b>${money(l.monto)}</b></div><div><small>${off ? 'Venció' : 'Vence'}</small><b>${l.vencimiento.split('-').reverse().join('-')}</b></div></div>
+      <a class="jbLic-btn" style="margin-top:0" href="${waLink(l, off ? 'reactivar' : 'pagar')}" target="_blank" rel="noopener">${WA_ICON}${off ? 'Pedir reactivación' : 'Pagar con Palma Codes'}</a>
+      <button type="button" class="jbMod-later">Entendido</button></div>`;
+    document.body.appendChild(m);
+    const cerrar = () => { m.remove(); document.removeEventListener('keydown', esc); };
+    const esc = e => { if (e.key === 'Escape') cerrar(); };
+    m.querySelector('.jbMod-later').addEventListener('click', cerrar);
+    document.addEventListener('keydown', esc);
+    m.querySelector('.jbLic-btn').focus();
+  }
+  let avisoMostrado = false;
+  function htmlChip(l, c){
+    const off = c.estado === 'vencido' || c.estado === 'suspendido';
+    const txt = off ? (c.estado === 'vencido' ? 'Cuota vencida · asistente desactivado' : 'Asistente desactivado') : `Asistente activo · ${textoDias(c.dias)}`;
+    const btn = off ? `<a class="jbLicChip-btn" href="${waLink(l)}" target="_blank" rel="noopener">${WA_ICON}Pedir reactivación</a>` : '';
+    return `<span class="jbLicChip jbLicChip--${c.estado}"><i class="jbLic-dot"></i><span>${txt}</span>${btn}</span>`;
+  }
+
+  function render(){
+    if (!lic) return;
+    const c = calcular(lic);
+    document.querySelectorAll('.jbLicSlot').forEach(el => {
+      el.innerHTML = el.dataset.lic === 'full' ? htmlFull(lic, c) : el.dataset.lic === 'preview' ? htmlPreview(lic, c) : el.dataset.lic === 'mini' ? htmlMini(lic, c) : el.dataset.lic === 'box' ? htmlBox(lic, c) : htmlChip(lic, c);
+    });
+    // Prioridad del módulo de pago: sube a medida que se acerca el vencimiento
+    const offP = c.estado === 'vencido' || c.estado === 'suspendido';
+    const nivel = (offP || c.dias <= 3) ? 3 : c.dias <= 5 ? 2 : c.dias <= 10 ? 1 : 0;
+    const panel = document.getElementById('jbLicPanel');
+    if (panel){ panel.style.order = [45, 25, 5, 0][nivel]; panel.dataset.nivel = nivel; }
+    // Aviso al entrar (cada vez que carga el panel del barbero) desde 5 días antes
+    if (nivel >= 2 && !avisoMostrado){
+      const espera = setInterval(() => {
+        const ap = document.getElementById('admin-panel');
+        if (ap && ap.style.display === 'block'){ clearInterval(espera); mostrarAviso(lic, calcular(lic)); }
+      }, 500);
+      avisoMostrado = true;
+    }
+    // Barra superior "Asistente activo"
+    const off = c.estado === 'vencido' || c.estado === 'suspendido';
+    const card = document.getElementById('jbEstadoCard');
+    const tit = document.getElementById('jbEstadoTitulo');
+    if (card){
+      card.classList.toggle('jbLic-off', off);
+      card.classList.toggle('jbLic-warn', c.estado === 'porvencer');
+    }
+    if (tit) tit.textContent = off ? 'Asistente desactivado' : 'Asistente activo';
+  }
+
+  window.addEventListener('load', function(){
+    if (typeof db === 'undefined') return console.error('Licencia: db de Firebase no disponible');
+    const ref = db.ref('config/asistente');
+    // Primera vez: crea el registro con la cuota que vence el 17
+    ref.once('value').then(s => { if (!s.exists()) ref.set(DEFAULTS); }).catch(e => console.error('Licencia:', e));
+    ref.on('value', snap => {
+      const v = snap.val() || DEFAULTS;
+      lic = {
+        activo: v.activo !== false,
+        vencimiento: /^\d{4}-\d{2}-\d{2}$/.test(v.vencimiento || '') ? v.vencimiento : DEFAULTS.vencimiento,
+        monto: Number(v.monto) || DEFAULTS.monto,
+        periodoDias: Number(v.periodoDias) || DEFAULTS.periodoDias,
+        ultimoPago: v.ultimoPago || ''
+      };
+      render();
+    }, e => console.error('Licencia:', e));
+    setInterval(render, 60000); // refresca al cruzar la medianoche
+  });
+})();
+</script>
+
+<style>
+.jbCtl{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin:18px 0 8px;padding:20px 22px;border-radius:12px;background:linear-gradient(135deg,#1d1e23,#17181c);border:1px solid rgba(228,166,79,.3);position:relative;overflow:hidden;font-family:'Poppins',sans-serif}
+.jbCtl::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c,#8b8d96)}
+.jbCtl.on{--c:#33d17a}.jbCtl.off{--c:#ff3b3f}
+.jbCtl-t{font-family:'Playfair Display',serif;font-weight:700;font-size:1.1rem;color:var(--barber-orange,#e4a64f);margin-bottom:6px}
+.jbCtl-s{display:flex;align-items:center;gap:9px;font-size:.95rem;font-weight:600;color:#fff}
+.jbCtl-s i{width:9px;height:9px;border-radius:50%;background:var(--c,#8b8d96)}
+.jbCtl-d{font-size:.8rem;color:#8b8d96;margin-top:4px}
+.jbCtl-btn{padding:13px 24px;border:none;border-radius:10px;cursor:pointer;font-family:'Poppins',sans-serif;font-weight:700;font-size:.95rem;color:#fff;transition:transform .15s ease,opacity .15s ease}
+.jbCtl-btn:hover:not(:disabled){transform:translateY(-2px)}
+.jbCtl-btn:disabled{opacity:.5;cursor:wait}
+.jbCtl-btn:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.jbCtl.on .jbCtl-btn{background:linear-gradient(135deg,#e4a64f,#ff3b3f)}
+.jbCtl.off .jbCtl-btn{background:linear-gradient(135deg,#33d17a,#1fa85d)}
+</style>
+<script>
+/* Control del bot (solo panel secreto) → escribe config/asistente en Firebase */
+window.addEventListener('load', function(){
+  const box = document.getElementById('jbCtl'); if(!box) return;
+  const btn = document.getElementById('jbCtlBtn'), est = document.getElementById('jbCtlEstado'), det = document.getElementById('jbCtlDetalle');
+  const ref = db.ref('config/asistente');
+  const hoyCL = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Santiago' });
+  const dias = (a,b) => { const [y1,m1,d1]=a.split('-').map(Number),[y2,m2,d2]=b.split('-').map(Number); return Math.round((Date.UTC(y2,m2-1,d2)-Date.UTC(y1,m1-1,d1))/864e5); };
+  const masDias = (s,n) => { const [y,m,d]=s.split('-').map(Number); return new Date(Date.UTC(y,m-1,d+n)).toISOString().slice(0,10); };
+  // Suma n meses calendario respetando el día; si el mes destino no tiene ese día, usa el último (ej: 31 ene → 28 feb)
+  const masMes = (s,n) => { const [y,m,d]=s.split('-').map(Number); const ult = new Date(Date.UTC(y,m-1+n+1,0)).getUTCDate(); return new Date(Date.UTC(y,m-1+n,Math.min(d,ult))).toISOString().slice(0,10); };
+  let data = null;
+
+  function render(){
+    if(!data) return;
+    const venc = data.vencimiento || '2026-10-17';
+    const d = dias(hoyCL(), venc);
+    const encendido = data.activo !== false && d >= 0;
+    box.className = 'jbCtl ' + (encendido ? 'on' : 'off');
+    est.innerHTML = '<i></i>' + (encendido ? 'Bot encendido · los clientes ven el bot' : 'Bot apagado · los clientes ven el calendario');
+    det.textContent = d >= 0 ? `Cuota vigente hasta el ${venc} (${d} ${d===1?'día':'días'})` : `Cuota vencida el ${venc}`;
+    btn.textContent = encendido ? 'Apagar bot' : 'Encender bot';
+    btn.disabled = false;
+    btn.dataset.accion = encendido ? 'apagar' : 'encender';
+    btn.dataset.vencida = d < 0 ? '1' : '';
+  }
+  ref.on('value', s => { data = s.val() || { activo:true, vencimiento:'2026-10-17' }; render(); });
+
+  const pagoBtn = document.getElementById('jbCtlPago'), listaPagos = document.getElementById('jbCtlPagos');
+  db.ref('config/asistente_pagos').limitToLast(3).on('value', s => {
+    const v = Object.values(s.val() || {}).reverse();
+    listaPagos.textContent = v.length ? 'Últimos pagos: ' + v.map(x => `${x.fecha} ($${Number(x.monto).toLocaleString('es-CL')})`).join(' · ') : 'Sin pagos registrados';
+  });
+  pagoBtn.addEventListener('click', async function(){
+    try{
+      const venc = (data && data.vencimiento) || hoyCL(), monto = (data && data.monto) || 20000;
+      const base = dias(hoyCL(), venc) >= 0 ? venc : hoyCL();   // si paga antes, no pierde días
+      const nuevo = masMes(base, 1);   // mismo día del mes siguiente (17 oct → 17 nov)
+      if(!confirm(`Registrar pago de $${Number(monto).toLocaleString('es-CL')}.\nNuevo vencimiento: ${nuevo}\n¿Confirmar?`)) return;
+      pagoBtn.disabled = true;
+      await ref.update({ activo:true, vencimiento:nuevo, ultimoPago:hoyCL() });
+      await db.ref('config/asistente_pagos').push({ fecha:hoyCL(), monto:monto, vencimiento:nuevo });
+    }catch(e){ alert('No se pudo guardar: ' + e.message); }
+    pagoBtn.disabled = false;
+  });
+  btn.addEventListener('click', async function(){
+    try{
+      if(btn.dataset.accion === 'apagar'){
+        if(!confirm('¿Apagar el bot? Los clientes verán el calendario al recargar el mismo link.')) return;
+        btn.disabled = true; await ref.update({ activo:false });
+      } else if(btn.dataset.vencida){
+        if(!confirm('La cuota está vencida. ¿Encender el bot y extender el vencimiento 30 días desde hoy?')) return;
+        btn.disabled = true; await ref.update({ activo:true, vencimiento: masDias(hoyCL(), 30) });
+      } else {
+        btn.disabled = true; await ref.update({ activo:true });
+      }
+    }catch(e){ alert('No se pudo guardar: ' + e.message); render(); }
+  });
+});
+</script>
+
+<script>
+/* Orden de módulos: Hoy → Calendario → (Pago, según urgencia) → Estadísticas → Config → Resultados */
+(function(){
+  const grid = document.querySelector('.admin-grid'); if(!grid) return;
+  const est = document.getElementById('card-estadisticas');
+  if (est) grid.appendChild(est);
+  grid.querySelectorAll(':scope > br, .columna-izquierda > br, .columna-derecha > br').forEach(b => b.remove());
+  const cards = [...grid.querySelectorAll('.card')];
+  const set = (el, o) => { if(el){ el.style.order = o; el.style.margin = '0'; } };
+  set(cards.find(c => c.querySelector('#fecha-hoy')), 10);
+  set(cards.find(c => c.querySelector('.calendario-header')), 30);
+  set(est, 40);
+  set(cards.find(c => /Configuración/.test((c.querySelector('h2')||{}).textContent||'')), 50);
+  set(grid.querySelector('.tarjeta-animada'), 60);
+})();
+</script>
+<style>
+.jbCont{margin:8px 0 18px;padding:26px 22px;border-radius:12px;text-align:center;background:linear-gradient(135deg,#1d1e23,#17181c);border:1px solid rgba(228,166,79,.3);font-family:'Poppins',sans-serif}
+.jbCont-lbl{font-size:.85rem;color:#8b8d96;margin-bottom:6px}
+.jbCont-num{font-family:'Playfair Display',serif;font-size:4.5rem;font-weight:700;line-height:1;color:#e4a64f;font-variant-numeric:tabular-nums}
+.jbCont-live{display:inline-flex;align-items:center;gap:7px;margin-top:10px;font-size:.74rem;font-weight:600;color:#33d17a}
+.jbCont-live i{width:8px;height:8px;border-radius:50%;background:#33d17a;animation:jbContP 2s ease-in-out infinite}
+@keyframes jbContP{0%,100%{opacity:1}50%{opacity:.35}}
+.jbCont-btn{display:block;margin:16px auto 0;padding:9px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:transparent;color:#aeb0b8;font-family:'Poppins',sans-serif;font-size:.78rem;cursor:pointer}
+.jbCont-btn:hover{color:#fff;border-color:#fff}
+.jbCont-btn.excl{border-color:#33d17a;color:#33d17a}
+@media (prefers-reduced-motion:reduce){.jbCont-live i{animation:none}}
+</style>
+<script>
+window.addEventListener('load', function () {
+  const num = document.getElementById('jbContNum'), btn = document.getElementById('jbContExcl');
+  if (!num || typeof db === 'undefined') return;
+
+  // Número en tiempo real
+  db.ref('config/contadorAdmin').on('value', s => {
+    num.textContent = Number(s.val() || 0).toLocaleString('es-CL');
+  });
+
+  // Excluir / incluir ESTE dispositivo (se guarda solo en este navegador)
+  function pintarBoton() {
+    const excl = localStorage.getItem('jbNoContar') === '1';
+    btn.className = 'jbCont-btn' + (excl ? ' excl' : '');
+    btn.textContent = excl ? '✓ Este dispositivo NO cuenta (tocar para volver a contar)' : 'Excluir este dispositivo del conteo';
+  }
+  btn.addEventListener('click', () => {
+    if (localStorage.getItem('jbNoContar') === '1') localStorage.removeItem('jbNoContar');
+    else localStorage.setItem('jbNoContar', '1');
+    pintarBoton();
+  });
+  pintarBoton();
+});
+</script>
+<script src="admin-push.js"></script>
+</body>
+</html>

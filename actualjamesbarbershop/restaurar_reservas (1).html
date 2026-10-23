@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Restaurar reservas</title>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<style>
+  :root { --bg:#fff; --fg:#1b1b1b; --muted:#666; --line:#ddd; --card:#f6f6f6; --ok:#1a7f37; --warn:#b26a00; --bad:#c62828; --acc:#1f5eff; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#121212; --fg:#eee; --muted:#9a9a9a; --line:#333; --card:#1c1c1c; --ok:#4cc26d; --warn:#f0a23b; --bad:#ff6b6b; --acc:#6c92ff; } }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:16px; background:var(--bg); color:var(--fg); font:15px/1.45 system-ui,sans-serif; max-width:980px; margin-inline:auto; }
+  h1 { font-size:1.3rem; margin:0 0 4px; } h2 { font-size:1.05rem; margin:22px 0 8px; }
+  p.sub { color:var(--muted); margin:0 0 12px; }
+  .box { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px; margin:10px 0; }
+  .wrap { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; min-width:720px; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  th { font-size:.8rem; color:var(--muted); font-weight:600; }
+  input[type=text], input[type=date], input[type=tel] { width:100%; padding:6px 8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--fg); font:inherit; }
+  button { padding:10px 16px; border:0; border-radius:8px; background:var(--acc); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+  button.sec { background:transparent; color:var(--acc); border:1px solid var(--acc); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .tag { font-size:.75rem; padding:2px 7px; border-radius:99px; border:1px solid var(--line); white-space:nowrap; }
+  .ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); } .muted { color:var(--muted); }
+  #log { white-space:pre-wrap; font:13px/1.5 ui-monospace,monospace; }
+  .row { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; align-items:end; }
+  .row label { font-size:.78rem; color:var(--muted); display:block; margin-bottom:2px; }
+  @media (max-width:700px){ .row { grid-template-columns:1fr 1fr; } }
+</style>
+</head>
+<body>
+<h1>♻️ Restaurar reservas desde ntfy</h1>
+<p class="sub">Solo <b>agrega</b> reservas que falten. No borra ni modifica nada de lo que ya existe, y omite las que chocan con una fecha y hora ya ocupadas.</p>
+
+<div class="box" id="estado">Conectando con Firebase…</div>
+
+<h2>Vigentes (hoy en adelante)</h2>
+<div class="wrap"><table id="tVig"></table></div>
+
+<h2>Pasadas (solo para historial)</h2>
+<p class="sub">Salen sin marcar. Márcalas solo si quieres recuperar el historial de los últimos días.</p>
+<div class="wrap"><table id="tPas"></table></div>
+
+<h2>Agregar una reserva que falte</h2>
+<div class="box">
+  <div class="row">
+    <div><label>Nombre</label><input type="text" id="mNombre"></div>
+    <div><label>Fecha</label><input type="date" id="mFecha"></div>
+    <div><label>Hora (HH:MM)</label><input type="text" id="mHora" placeholder="16:00"></div>
+    <div><label>Servicio</label><input type="text" id="mServ" placeholder="Corte Degradado"></div>
+    <div><label>Total</label><input type="text" id="mTotal" placeholder="$12.000"></div>
+    <div><label>Teléfono (opcional)</label><input type="tel" id="mTel" placeholder="569..."></div>
+  </div>
+  <p style="margin:10px 0 0"><button class="sec" id="btnAdd">+ Agregar a la lista</button></p>
+</div>
+
+<p style="margin-top:18px"><button id="btnRestaurar" disabled>Restaurar reservas marcadas</button></p>
+<div class="box"><div id="log" class="muted">Aquí aparecerá el resultado.</div></div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBHLlV9HDfa1v-Uz4YVcbt3vQGByhNFYus",
+  authDomain: "jeisonstyle-1530f.firebaseapp.com",
+  databaseURL: "https://jeisonstyle-1530f-default-rtdb.firebaseio.com",
+  projectId: "jeisonstyle-1530f",
+  storageBucket: "jeisonstyle-1530f.firebasestorage.app",
+  messagingSenderId: "40159402096",
+  appId: "1:40159402096:web:d54b2d9a2dd990c1203cb5",
+  measurementId: "G-3RGRBSQ9QG"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// Datos leídos de las capturas de ntfy. c = hora en que se hizo la reserva (hora de Chile).
+const RESERVAS = [
+  // ---- vigentes ----
+  { n:"Giovanni San Martín",  f:"2026-10-21", h:"13:00", s:"Corte Degradado",         t:"$12.000", c:"2026-10-21T12:04:00-03:00" },
+  { n:"hernan courtin molina",f:"2026-10-21", h:"19:00", s:"Corte Degradado",         t:"$12.000", c:"2026-10-21T09:31:00-03:00" },
+  { n:"Fanny trejo",          f:"2026-10-21", h:"17:00", s:"Corte Clásico",           t:"$10.000", c:"2026-10-20T11:05:00-03:00" },
+  { n:"Maximo Ordoñez",       f:"2026-10-21", h:"16:00", s:"Corte Degradado + Cejas", t:"$15.000", c:"2026-10-21T12:31:00-03:00" },
+  { n:"Nicolás moya torres",  f:"2026-10-22", h:"17:00", s:"Corte Degradado",         t:"$12.000", c:"2026-10-21T10:32:00-03:00" },
+  { n:"matias",               f:"2026-10-23", h:"14:00", s:"Corte Degradado",         t:"$12.000", c:"2026-10-21T13:24:00-03:00" },
+  { n:"PROBANDO (PALMA CODES)",f:"2026-10-23", h:"17:00", s:"Color Global + Rizos/Ondulaciones", t:"$120.000" },
+  { n:"Hans",                 f:"2026-10-23", h:"18:00", s:"Corte Degradado",         t:"$12.000" },
+  { n:"Diego Palma Probando", f:"2026-10-23", h:"19:00", s:"Barba Express + Color Global", t:"$76.000" },
+  { n:"Ignacio",              f:"2026-10-24", h:"16:00", s:"Corte Degradado",         t:"$12.000", c:"2026-10-21T13:30:00-03:00" },
+  { n:"Benjamín Moya",        f:"2026-10-26", h:"12:00", s:"Corte Degradado",         t:"$12.000" },
+  { n:"Samuel crisosto",      f:"2026-10-26", h:"18:00", s:"Corte Degradado",         t:"$12.000", c:"2026-10-21T13:27:00-03:00" },
+  { n:"Jonathan",             f:"2026-10-29", h:"20:00", s:"Corte Degradado",         t:"$12.000" },
+  // ---- pasadas ----
+  { n:"Francisco Monsalves",  f:"2026-10-19", h:"12:00", s:"Corte Degradado", t:"$12.000", c:"2026-10-18T20:38:00-03:00", pasada:true },
+  { n:"Jaime Acuña",          f:"2026-10-19", h:"14:00", s:"Corte Degradado", t:"$12.000", c:"2026-10-19T11:38:00-03:00", pasada:true },
+  { n:"David",                f:"2026-10-19", h:"16:00", s:"Corte Degradado", t:"$12.000", c:"2026-10-19T12:24:00-03:00", pasada:true },
+  { n:"Eduardo nahuelmán",    f:"2026-10-19", h:"17:00", s:"Corte Degradado", t:"$12.000", c:"2026-10-19T12:24:00-03:00", pasada:true },
+  { n:"Angel",                f:"2026-10-19", h:"19:00", s:"Corte Degradado", t:"$12.000", c:"2026-10-19T17:11:00-03:00", pasada:true },
+  { n:"Carolina",             f:"2026-10-20", h:"14:00", s:"Cejas",           t:"$3.000",  c:"2026-10-20T10:22:00-03:00", pasada:true },
+  { n:"Carolina",             f:"2026-10-20", h:"16:00", s:"Cejas",           t:"$3.000",  c:"2026-10-20T10:25:00-03:00", pasada:true },
+  { n:"PROBANDO (PALMA CODES)",f:"2026-10-20", h:"18:00", s:"Corte Clásico",   t:"$10.000", pasada:true, cancelada:true },
+];
+// Se conserva el registro cancelado para historial, pero no se puede restaurar como reserva activa.
+
+let existentes = {};     // reservas actuales en Firebase
+let clientes = [];       // clientes en Firebase: {id, nombre, norm, telefono}
+let filas = [];          // estado de cada fila
+
+const norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+
+function buscarCliente(nombre) {
+  const n = norm(nombre);
+  const exactos = clientes.filter(c => c.norm === n);
+  if (exactos.length === 1) return { c: exactos[0], tipo: "exacto" };
+  if (exactos.length > 1) {
+    const conTel = exactos.filter(c => c.telefono);
+    return { c: (conTel[0] || exactos[0]), tipo: "exacto" };
+  }
+  if (n.length >= 4) {
+    const parc = clientes.filter(c => c.norm && (c.norm.includes(n) || n.includes(c.norm)) && c.norm.length >= 4);
+    if (parc.length === 1) return { c: parc[0], tipo: "parcial" };
+  }
+  return null;
+}
+
+function estadoFila(f) {
+  if (f.cancelada) return { ok: false, txt: "Cancelada por admin · solo historial", cls: "muted" };
+  const ocupante = Object.values(existentes).find(r => r.fecha === f.f && r.hora === f.h);
+  if (!ocupante) return { ok: true, txt: "Falta, se puede restaurar", cls: "ok" };
+  if (norm(ocupante.nombre) === norm(f.n)) return { ok: false, txt: "Ya existe", cls: "muted" };
+  return { ok: false, txt: "Horario ocupado por " + ocupante.nombre, cls: "warn" };
+}
+
+function preparar() {
+  filas = RESERVAS.map((r, i) => {
+    const m = buscarCliente(r.n);
+    return { ...r, i, tel: m && m.c.telefono ? m.c.telefono : "", clienteId: m ? m.c.id : null, match: m ? m.tipo : null, marcado: !r.pasada };
+  });
+  filas.forEach(f => { if (!estadoFila(f).ok) f.marcado = false; });
+}
+
+function pintar() {
+  const head = "<tr><th></th><th>Nombre</th><th>Fecha</th><th>Hora</th><th>Servicio</th><th>Total</th><th>Teléfono</th><th>Estado</th></tr>";
+  const fila = f => {
+    const e = estadoFila(f);
+    const nota = f.match === "exacto" ? '<span class="tag ok">tel. de clientes</span>' : f.match === "parcial" ? '<span class="tag warn">cliente parecido, revisa</span>' : '<span class="tag muted">sin cliente</span>';
+    return `<tr>
+      <td><input type="checkbox" data-i="${f.i}" ${f.marcado ? "checked" : ""} ${e.ok ? "" : "disabled"}></td>
+      <td>${esc(f.n)}</td><td>${esc(f.f)}</td><td>${esc(f.h)}</td><td>${esc(f.s)}</td><td>${esc(f.t)}</td>
+      <td><input type="tel" data-tel="${f.i}" value="${esc(f.tel)}" placeholder="sin teléfono"> ${nota}</td>
+      <td class="${e.cls}">${esc(e.txt)}</td></tr>`;
+  };
+  document.getElementById("tVig").innerHTML = head + filas.filter(f => !f.pasada).map(fila).join("");
+  document.getElementById("tPas").innerHTML = head + filas.filter(f => f.pasada).map(fila).join("");
+  document.querySelectorAll("input[data-i]").forEach(el => el.onchange = () => { filas[+el.dataset.i].marcado = el.checked; });
+  document.querySelectorAll("input[data-tel]").forEach(el => el.oninput = () => { filas[+el.dataset.tel].tel = el.value; });
+}
+
+async function cargar() {
+  const est = document.getElementById("estado");
+  try {
+    const [rs, cs] = await Promise.all([db.ref("reservas").once("value"), db.ref("clientes").once("value")]);
+    existentes = rs.val() || {};
+    clientes = [];
+    cs.forEach(ch => {
+      const c = ch.val() || {};
+      clientes.push({ id: ch.key, nombre: c.nombreDisplay || c.nombre || "", norm: c.nombreNormalizado ? norm(c.nombreNormalizado) : norm(c.nombreDisplay || c.nombre), telefono: c.telefono || "" });
+    });
+    est.innerHTML = `✅ Conectado. Reservas actuales en la base: <b>${Object.keys(existentes).length}</b>. Clientes encontrados: <b>${clientes.length}</b> (de ahí se sacan teléfonos e IDs cuando el nombre coincide).`;
+    preparar(); pintar();
+    document.getElementById("btnRestaurar").disabled = false;
+  } catch (e) {
+    est.innerHTML = `<span class="bad">❌ No se pudo leer Firebase: ${esc(e.message)}</span><br>Revisa tu conexión y las reglas de la base de datos.`;
+  }
+}
+
+document.getElementById("btnAdd").onclick = () => {
+  const n = document.getElementById("mNombre").value.trim();
+  const f = document.getElementById("mFecha").value;
+  const h = document.getElementById("mHora").value.trim();
+  if (!n || !f || !/^\d{1,2}:\d{2}$/.test(h)) { alert("Falta nombre, fecha, o la hora en formato HH:MM."); return; }
+  const hh = h.padStart(5, "0");
+  const tel = document.getElementById("mTel").value.trim();
+  const m = buscarCliente(n);
+  const hoy = new Date().toISOString().slice(0, 10);
+  const nueva = { n, f, h: hh, s: document.getElementById("mServ").value.trim() || "Corte", t: document.getElementById("mTotal").value.trim() || "", c: new Date().toISOString(), pasada: f < hoy };
+  filas.push({ ...nueva, i: filas.length, tel: tel || (m && m.c.telefono) || "", clienteId: m ? m.c.id : null, match: m ? m.tipo : null, marcado: !nueva.pasada });
+  ["mNombre","mFecha","mHora","mServ","mTotal","mTel"].forEach(id => document.getElementById(id).value = "");
+  pintar();
+};
+
+document.getElementById("btnRestaurar").onclick = async () => {
+  const btn = document.getElementById("btnRestaurar");
+  const log = document.getElementById("log");
+  btn.disabled = true; log.className = ""; log.textContent = "Restaurando…\n";
+  try {
+    const actual = (await db.ref("reservas").once("value")).val() || {};
+    const sel = filas.filter(f => f.marcado && !f.cancelada).sort((a, b) => {
+      const fechaA = a.c || `${a.f}T${a.h}:00`;
+      const fechaB = b.c || `${b.f}T${b.h}:00`;
+      return new Date(fechaA) - new Date(fechaB);
+    });
+    let ok = 0, omit = 0;
+    for (const f of sel) {
+      if (Object.values(actual).some(r => r.fecha === f.f && r.hora === f.h)) { log.textContent += `Omitida (horario ya ocupado): ${f.n} ${f.f} ${f.h}\n`; omit++; continue; }
+      const tel = String(f.tel || "").trim();
+      const dato = { nombre: f.n, fecha: f.f, hora: f.h, servicios: f.s, total: f.t, restaurada: true };
+      if (f.c) dato.timestamp = new Date(f.c).getTime();
+      if (tel) { dato.telefono = tel; dato.acepta_contacto_whatsapp = true; }
+      if (f.clienteId) dato.clienteId = f.clienteId;
+      const ref = db.ref("reservas").push();
+      await ref.set(dato);
+      actual[ref.key] = dato;
+      log.textContent += `✅ Restaurada: ${f.n} ${f.f} ${f.h}\n`;
+      ok++;
+    }
+    log.textContent += `\nListo. Restauradas: ${ok}. Omitidas: ${omit}.`;
+    existentes = actual; preparar(); pintar();
+  } catch (e) {
+    log.className = "bad"; log.textContent += `\n❌ Error: ${e.message}\nSi dice "permission denied", revisa las reglas de la base de datos.`;
+  }
+  btn.disabled = false;
+};
+
+cargar();
+</script>
+</body>
+</html>

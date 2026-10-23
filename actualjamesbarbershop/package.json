@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test netlify/functions/_push-shared.test.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.4.0",
+    "web-push": "^3.6.7"
+  }
+}
